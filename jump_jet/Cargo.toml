@@ -5,4 +5,4 @@ authors = ["James Morrison <jamesmorrison3@live.co.uk>"]
 
 [dependencies]
 byteorder = "1.1.0"
-leb128 = "0.2.1"
+leb = { path = "../leb" }
