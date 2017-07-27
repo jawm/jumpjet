@@ -1,0 +1,6 @@
+[package]
+name = "leb"
+version = "0.1.0"
+authors = ["James Morrison <jamesmorrison3@live.co.uk>"]
+
+[dependencies]
