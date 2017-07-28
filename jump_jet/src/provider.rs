@@ -4,7 +4,7 @@ use self::leb::signed;
 use self::leb::unsigned;
 use self::byteorder::ByteOrder;
 use self::byteorder::LittleEndian;
-// use self::byteorder::BigEndian;
+use self::byteorder::BigEndian;
 use std::io::Cursor;
 use std::io::Error;
 use std::io::Read;
@@ -17,6 +17,30 @@ pub trait ProgramProvider {
 pub struct BinaryProvider {
     pub buffer: Vec<u8>,
 }
+#[derive(Debug)]
+pub struct Section {
+    id: u8,
+    len: u64
+}
+
+
+// -- TYPES
+#[derive(Debug)]
+pub struct TypesSection {
+    section: Section,
+    count: u64,
+    entries: Vec<TypesSectionEntry>
+}
+#[derive(Debug)]
+pub struct TypesSectionEntry {
+    form: i64,
+    param_count: u64,
+    params: Vec<u64>,
+    return_count: u64,
+    return_type: Vec<i64>
+}
+// -- END TYPES
+
 
 fn read_varuint(size: u32, buffer: &mut Cursor<&[u8]>) -> Result<u64,Error> {
 	unsigned(&mut buffer.bytes())
@@ -24,12 +48,6 @@ fn read_varuint(size: u32, buffer: &mut Cursor<&[u8]>) -> Result<u64,Error> {
 
 fn read_varint(size: u32, buffer: &mut Cursor<&[u8]>) -> Result<i64,Error> {
 	signed(&mut buffer.bytes())
-}
-
-fn read_string(buffer: &mut Cursor<&[u8]>) -> (u32, u32) {
-	let length = read_varuint(32, buffer).unwrap();
-	println!("len {}", length);
-	(6,7)
 }
 
 impl BinaryProvider {
@@ -43,7 +61,7 @@ impl BinaryProvider {
     	let section_len = read_varuint(7, buf).unwrap();
     	println!("section_len {}", section_len);
     	match section_id {
-    		1 => self.read_section_types(section_len, buf),
+    		1 => self.read_section_types(Section{len: section_len, id: section_id}, buf),
             2 => self.read_section_imports(section_len, buf),
     		3 => self.read_section_functions(section_len, buf),
             4 => self.read_section_table(section_len, buf),
@@ -59,25 +77,50 @@ impl BinaryProvider {
         println!("\tEND SECTION");
     }
 
-    fn read_section_types(&self, len: u64, buf: &mut Cursor<&[u8]>){
-        println!("\t READING TYPES {}", len);
+    fn read_section_types(&self, section: Section, buf: &mut Cursor<&[u8]>){
+        println!("\t READING TYPES");
     	let count = read_varuint(32, buf).unwrap();
     	println!("count {}", count);
+
+        let mut x_entries: Vec<TypesSectionEntry> = Vec::with_capacity(count as usize);
+
     	for i in 0..count {
     		let form = read_varint(7, buf).unwrap();
     		assert!(form == 0x60); // form: 'func'
             println!("form {:x}", form);
     		let param_count = read_varuint(32, buf).unwrap();
     		println!("param_count {}", param_count);
+
+            let mut x_params: Vec<u64> = Vec::with_capacity(param_count as usize);
+
     		for param_index in 0..param_count {
 				let param_type = read_varuint(7,buf).unwrap();
 				println!("param {} type {:x}", param_index, param_type);
+
+                x_params.push(param_type);
     		}
     		let return_count = read_varuint(1, buf).unwrap();
     		println!("return_count {}", return_count);
-    		let return_type = buf.read_u8().unwrap();//read_varint(7, buf).unwrap();
+    		let return_type = read_varint(7, buf).unwrap();
     		println!("return_type {:x}", return_type);
+
+            x_entries.push(TypesSectionEntry{
+                form: form,
+                param_count: param_count,
+                params: x_params,
+                return_count: return_count,
+                return_type: vec![return_type]
+            });
     	}
+
+        let x_type_section = TypesSection {
+            count: count,
+            entries: x_entries,
+            section: section
+        };
+
+        println!("TYPES SECTION");
+        println!("{:?}", x_type_section);
     }
 
     fn read_section_imports(&self, len: u64, buf: &mut Cursor<&[u8]>) {
@@ -86,13 +129,30 @@ impl BinaryProvider {
 
     fn read_section_functions(&self, len: u64, buf: &mut Cursor<&[u8]>) {
     	println!("\tREADING FUNCTIONS {}", len);
-        for i in 0..len {
-            buf.read_u8().unwrap();
+        let count = read_varuint(32, buf).unwrap();
+        println!("count {}", count);
+        for i in 0..count {
+            let type_index = read_varuint(32, buf).unwrap();
+            println!("type_index {}", type_index);
         }
     }
 
     fn read_section_table(&self, len: u64, buf: &mut Cursor<&[u8]>) {
         println!("\t READING TABLE {}", len);
+        let count = read_varuint(32, buf).unwrap();
+        println!("count {}", count);
+        for i in 0..count {
+            let elem_type = read_varint(7, buf).unwrap();
+            assert!(elem_type == 0x70); // must be anyfunc
+            let resizable_limits_flag = read_varuint(1, buf).unwrap();
+            let resizable_limits_initial = read_varuint(32, buf).unwrap();
+            if resizable_limits_flag == 1 {
+                let resizable_limits_maximum = read_varuint(32, buf).unwrap();
+                println!("resizable_limits {} {} {}", resizable_limits_flag, resizable_limits_initial, resizable_limits_maximum);
+            } else {
+                println!("resizable_limits {} {}", resizable_limits_flag, resizable_limits_initial);
+            }
+        }
     }
 
     fn read_section_memory(&self, len: u64, buf: &mut Cursor<&[u8]>) {
@@ -105,6 +165,20 @@ impl BinaryProvider {
 
     fn read_section_exports(&self, len: u64, buf: &mut Cursor<&[u8]>) {
         println!("\t READING EXPORTS {}", len);
+        let count = read_varuint(32, buf).unwrap();
+        println!("count {}", count);
+        for i in 0..count {
+            let field_len = read_varuint(32, buf).unwrap();
+            let mut string = vec![];
+            buf.take(field_len).read_to_end(&mut string);
+            let field_str = String::from_utf8(string).unwrap();
+            println!("field_str {}", field_str);
+
+            let external_type = buf.read_u8().unwrap();
+            println!("external_type {}", external_type);
+            let index = read_varuint(32, buf).unwrap();
+            println!("index {}", index);
+        }
     }
 
     fn read_section_start(&self, len: u64, buf: &mut Cursor<&[u8]>) {
@@ -113,14 +187,57 @@ impl BinaryProvider {
 
     fn read_section_elements(&self, len: u64, buf: &mut Cursor<&[u8]>) {
         println!("\t READING ELEMENTS {}", len);
+        let count = read_varuint(32, buf).unwrap();
+        println!("count {}", count);
+        for i in 0..count {
+            let index = read_varuint(32, buf).unwrap();
+            println!("index {}", index);
+            
+            self.parse_expression(buf);
+
+            // println!("offset {:X}", offset);
+            let num_elem = read_varuint(32, buf).unwrap();
+            println!("num_elem {}", num_elem);
+            for i in 0..num_elem {
+                let function_index = read_varuint(32, buf).unwrap();
+                println!("function_index {}", function_index);
+            }
+        }
     }
 
     fn read_section_code(&self, len: u64, buf: &mut Cursor<&[u8]>) {
         println!("\t READING CODE {}", len);
+        let count = read_varuint(32, buf).unwrap();
+        println!("count {}", count);
+        for i in 0..count {
+            let body_size = read_varuint(32, buf).unwrap();
+            println!("body_size {}", body_size);
+            let local_count = read_varuint(32, buf).unwrap();
+            println!("local_count {}", local_count);
+            for i in 0..local_count {
+                let local_type_count = read_varuint(32, buf).unwrap();
+                println!("local_type_count {}", local_type_count);
+                let local_type = read_varuint(7, buf).unwrap();
+                // TODO: parse the type https://github.com/WebAssembly/design/blob/master/BinaryEncoding.md#language-types
+            }
+            self.parse_expression(buf);
+        }
     }
 
     fn read_section_data(&self, len: u64, buf: &mut Cursor<&[u8]>) {
         println!("\t READING DATA {}", len);
+    }
+
+    fn parse_expression(&self, buf: &mut Cursor<&[u8]>) {
+        print!("expr ");
+        loop {
+            let next = buf.read_u8().unwrap();
+            print!("{:X} ", next);
+            if next == 0x0b {
+                break;
+            }
+        }
+        println!("");
     }
 }
 
