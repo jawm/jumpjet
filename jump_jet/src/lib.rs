@@ -6,6 +6,8 @@ use std::path::Path;
 use provider::ProgramProvider;
 use provider::BinaryProvider;
 
+mod tree;
+
 mod provider;
 
 pub fn build_module(file_name: &str) {
