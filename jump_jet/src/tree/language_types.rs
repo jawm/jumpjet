@@ -5,6 +5,7 @@ pub enum ValueType {
 	f_64
 }
 
+#[derive(PartialEq)]
 pub enum LanguageType {
 	i_32,
 	i_64,

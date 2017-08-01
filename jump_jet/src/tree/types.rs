@@ -1,11 +1,11 @@
 use super::language_types::{LanguageType, ValueType};
 
 pub struct TypeSection {
-	types: Vec<TypeEntry>
+	pub types: Vec<TypeEntry>
 }
 
 pub struct TypeEntry {
-	form: LanguageType, //almost certainly 'func'
-	params: Vec<ValueType>,
-	returns: Vec<ValueType> // for now, at most length 1
+	pub form: LanguageType, //almost certainly 'func'
+	pub params: Vec<ValueType>,
+	pub returns: Vec<ValueType> // for now, at most length 1
 }

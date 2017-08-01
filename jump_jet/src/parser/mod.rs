@@ -11,9 +11,15 @@ use std::collections::HashMap;
 
 use super::tree::Module;
 use super::tree::section::Section;
+use super::tree::language_types::ValueType;
+use super::tree::language_types::LanguageType;
+use super::tree::types::*;
+
+mod language_types;
+
 
 const MAGIC_NUMBER: u32 = 0x6d736100;
-
+const FUNC_FORM: u64 = 0x60;
 
 pub trait SectionParse {
 	fn parse<T: Read>(reader: T) -> Result<Section, ParseError>;
@@ -25,6 +31,10 @@ pub enum ParseError {
 	UnknownSectionId,
 	UnsupportedModuleVersion,
 	SectionLengthWrong,
+	InvalidTypeForm,
+	InvalidValueType,
+	InvalidLangaugeType,
+	TooManyReturns,
 	Io(io::Error)
 }
 
@@ -39,14 +49,14 @@ impl Module {
 	pub fn parse<T: Read>(reader: &mut T) -> Result<Module, ParseError> {
 		let magic_number = reader.read_u32::<LittleEndian>()?;
 		if magic_number != MAGIC_NUMBER {
-			return Err(ParseError::WrongMagicNumber);
+			return Err(ParseError::WrongMagicNumber)
 		}
 		let version = reader.read_u32::<LittleEndian>()?;
 		if version != 1 {
-			return Err(ParseError::UnsupportedModuleVersion);
+			return Err(ParseError::UnsupportedModuleVersion)
 		} else {
 			let sections = Module::parse_sections(reader)?;
-			return Ok(Module{sections:sections, version:version});
+			return Ok(Module{sections:sections, version:version})
 		}
 	}
 
@@ -75,9 +85,31 @@ impl Module {
 	}
 
 	fn read_section_types<T: Read>(reader: &mut T) -> Result<Section, ParseError> {
+		let count = unsigned(&mut reader.bytes())?;
+		let mut entries: Vec<TypeEntry> = vec![];
+		for entry in 0..count {
+			let form = LanguageType::parse(reader)?;
 
-		// Ok(Section::Type())
-    	Err(ParseError::WrongMagicNumber)
+			if form != LanguageType::func {
+				return Err(ParseError::InvalidTypeForm)
+			}
+			let param_count = unsigned(&mut reader.bytes())?;
+			let mut params: Vec<ValueType> = vec![];
+			for param_index in 0..param_count {
+				params.push(ValueType::parse(reader)?);
+			}
+			let return_count =  unsigned(&mut reader.bytes())?;
+			let mut returns: Vec<ValueType> = vec![];
+			if (return_count > 1) {
+				return Err(ParseError::TooManyReturns);
+			} else if (return_count == 0) {
+
+			} else {
+				returns.push(ValueType::parse(reader)?);
+			}
+			entries.push(TypeEntry{form: form, params: params, returns: returns});
+		}
+    	Ok(Section::Type(TypeSection{types:entries}))
     }
 
     fn read_section_imports<T: Read>(reader: &mut T) -> Result<Section, ParseError> {
