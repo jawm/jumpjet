@@ -1,3 +1,5 @@
+// TODO switch from enums to a bunch of structs instead.
+
 pub enum ValueType {
 	i_32,
 	i_64,
