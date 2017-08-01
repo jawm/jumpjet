@@ -1,6 +1,6 @@
 use std::io::Read;
 
-mod section;
+pub mod section;
 mod types;
 mod language_types;
 mod imports;
@@ -13,3 +13,8 @@ mod start;
 mod elements;
 mod code;
 mod data;
+
+pub struct Module {
+	pub sections: Vec<section::Section>,
+	pub version: u32
+}

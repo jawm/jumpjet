@@ -1,4 +1,5 @@
 use std::io::prelude::*;
+use std::io::Cursor;
 use std::fs::File;
 use std::error::Error;
 use std::path::Path;
@@ -7,6 +8,7 @@ use provider::ProgramProvider;
 use provider::BinaryProvider;
 
 mod tree;
+mod parser;
 
 mod provider;
 
@@ -24,7 +26,10 @@ pub fn build_module(file_name: &str) {
     let mut buffer = vec![];
     // read the whole file
     file.read_to_end(&mut buffer).unwrap();
-    BinaryProvider::new(buffer).provide();
+    
+    tree::Module::parse(&mut Cursor::new(&buffer[..]));
+
+    // BinaryProvider::new(buffer).provide();
 }
 
 
