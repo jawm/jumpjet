@@ -10,16 +10,20 @@ use super::elements::ElementSection;
 use super::code::CodeSection;
 use super::data::DataSection;
 
-pub enum Section {
-	Type(TypeSection),
-	Import(ImportSection),
-	Function(FunctionSection),
-	Table(TableSection),
-	Memory(MemorySection),
-	Global(GlobalSection),
-	Export(ExportSection),
-	Start(StartSection),
-	Element(ElementSection),
-	Code(CodeSection),
-	Data(DataSection)
+// pub enum Section {
+// 	Type(TypeSection),
+// 	Import(ImportSection),
+// 	Function(FunctionSection),
+// 	Table(TableSection),
+// 	Memory(MemorySection),
+// 	Global(GlobalSection),
+// 	Export(ExportSection),
+// 	Start(StartSection),
+// 	Element(ElementSection),
+// 	Code(CodeSection),
+// 	Data(DataSection)
+// }
+
+pub trait Section {
+	
 }
