@@ -15,6 +15,6 @@ pub mod code;
 pub mod data;
 
 pub struct Module {
-	pub sections: Vec<section::Section>,
+	pub sections: Vec<Box<section::Section>>,
 	pub version: u32
 }
