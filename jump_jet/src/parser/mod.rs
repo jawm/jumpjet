@@ -11,12 +11,12 @@ use std::collections::HashMap;
 
 use super::tree::Module;
 use super::tree::section::Section;
-use super::tree::language_types::*;
+use super::tree::language_types::ValueType;
+use super::tree::language_types::LanguageType;
 use super::tree::types::*;
-use super::tree::imports::*;
 
 mod language_types;
-mod types;
+
 
 const MAGIC_NUMBER: u32 = 0x6d736100;
 const FUNC_FORM: u64 = 0x60;
@@ -88,17 +88,15 @@ impl Module {
 		let count = unsigned(&mut reader.bytes())?;
 		let mut entries: Vec<TypeEntry> = vec![];
 		for entry in 0..count {
-			let form = language_types::parse_type(reader)?;
+			let form = LanguageType::parse(reader)?;
 
-			match form {
-				Type::func => println!("ok"),
-				_ => return Err(ParseError::InvalidTypeForm)
+			if form != LanguageType::func {
+				return Err(ParseError::InvalidTypeForm)
 			}
-
 			let param_count = unsigned(&mut reader.bytes())?;
 			let mut params: Vec<ValueType> = vec![];
 			for param_index in 0..param_count {
-				params.push(language_types::parse_value_type(reader)?);
+				params.push(ValueType::parse(reader)?);
 			}
 			let return_count =  unsigned(&mut reader.bytes())?;
 			let mut returns: Vec<ValueType> = vec![];
@@ -107,7 +105,7 @@ impl Module {
 			} else if (return_count == 0) {
 
 			} else {
-				returns.push(language_types::parse_value_type(reader)?);
+				returns.push(ValueType::parse(reader)?);
 			}
 			entries.push(TypeEntry{form: form, params: params, returns: returns});
 		}
@@ -115,11 +113,6 @@ impl Module {
     }
 
     fn read_section_imports<T: Read>(reader: &mut T) -> Result<Section, ParseError> {
-    	let count = unsigned(&mut reader.bytes())?;
-    	let mut entries: Vec<ImportEntry> = vec![];
-    	for entry in 0..count {
-    		// let 
-    	}
     	Err(ParseError::WrongMagicNumber)
     }
 

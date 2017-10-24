@@ -5,6 +5,6 @@ pub struct CodeSection {
 }
 
 pub struct FunctionBody {
-	locals: Vec<Box<ValueType>>,
+	locals: Vec<ValueType>,
 	code: Vec<Operation>
 }
