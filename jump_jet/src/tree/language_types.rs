@@ -1,21 +1,18 @@
 // TODO switch from enums to a bunch of structs instead.
-
-pub enum ValueType {
-	i_32,
-	i_64,
-	f_32,
-	f_64
-}
-
-#[derive(PartialEq)]
-pub enum LanguageType {
+pub enum Type {
 	i_32,
 	i_64,
 	f_32,
 	f_64,
-	anyfunc,			// no static signature validation check
+	anyfunc,
 	func,
-	empty_block	
+	empty_block
+}
+pub enum ValueType{
+	i_32,
+	i_64,
+	f_32,
+	f_64,
 }
 
 pub enum ExternalKind {
@@ -36,7 +33,7 @@ pub struct ResizableLimits {
 }
 
 pub struct GlobalType {
-	contentType: ValueType,
+	contentType: Box<ValueType>,
 	mutability: bool
 }
 
