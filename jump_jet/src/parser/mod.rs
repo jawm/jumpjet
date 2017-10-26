@@ -34,31 +34,39 @@ pub enum ParseError {
     Io(io::Error)
 }
 
-type P<'a> = Box<Fn(&'a mut Read) -> Result<Box<Section>,ParseError> + 'static>;
-pub struct ModuleParserInfo<'a> {
-    sections: HashMap<i32, P<'a>>
+pub trait ModuleParser {
+    fn parse(&self, &mut Read) -> Result<Box<Section>, ParseError>;
+}
+
+pub struct ModuleParserInfo {
+    sections: HashMap<i32, Box<ModuleParser>>
+}
+
+
+struct X;
+impl ModuleParser for X {
+    fn parse(&self, reader: &mut Read) -> Result<Box<Section>, ParseError> {
+        Err(ParseError::WrongMagicNumber)
+    }
 }
 
 impl ModuleParserInfo {
     pub fn default() -> ModuleParserInfo {
-        let f = Box::new(test);
+        // let f = Box::new(example);
 
-        let sections: HashMap<i32, P> = HashMap::new();
-        sections.insert(1, f);
+        let mut sections: HashMap<i32, Box<ModuleParser>> = HashMap::new();
+        sections.insert(1, Box::new(X{}));
         
-        ModuleParserInfo<'a> {
+        ModuleParserInfo {
             sections: sections
         }
     }
-
-    fn add_parser<'a>() {
-
-    }
 }
 
-fn test<T: Read>(reader: &mut T) -> Result<Box<Section>,ParseError> {
+fn example<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
     Err(ParseError::WrongMagicNumber)
 }
+
 // sections.insert(2, Module::read_section_imports(&mut subreader));
         // sections.insert(3, Module::read_section_functions(&mut subreader));
         // sections.insert(4, Module::read_section_table(&mut subreader));
@@ -82,7 +90,7 @@ impl From<io::Error> for ParseError {
 
 impl Module {
 
-    pub fn parse<T: Read>(reader: T) -> Result<Module, ParseError> {
+    pub fn parse<T: Read>(mut reader: T) -> Result<Module, ParseError> {
         let magic_number = reader.read_u32::<LittleEndian>()?;
         if magic_number != MAGIC_NUMBER {
             return Err(ParseError::WrongMagicNumber)
