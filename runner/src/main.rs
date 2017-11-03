@@ -1,7 +1,5 @@
 extern crate jump_jet;
 
-use std::collections::HashMap;
-
 fn main() {
     println!("Testing JumpJet");
 
@@ -9,16 +7,16 @@ fn main() {
     let mut runtime = jump_jet::Runtime::new();
 
     // Adds a group of functions to be used, accessible through their namespace
-    runtime.expose("namespace".to_string(), vec![]);
+    runtime.expose("namespace", vec![]);
 
     // opens the module, generates the program tree
-    runtime.add_module("main".to_string(), "program.wasm".to_string());
+    runtime.add_module("main", "program.wasm");
 
     // runs any startup specified by the module
-    runtime.prepare("main".to_string());
+    runtime.prepare("main");
 
     // runs a function from the module
-    match runtime.get("main".to_string()) {
+    match runtime.get("main") {
         Some(module) => module.run(),
         None         => println!("The module failed to load! Quitting or something")
     }

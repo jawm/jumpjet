@@ -15,6 +15,8 @@ use super::tree::language_types::ValueType;
 use super::tree::language_types::LanguageType;
 use super::tree::types::*;
 
+use tree::imports::ImportSection;
+
 mod language_types;
 
 
@@ -24,47 +26,117 @@ const FUNC_FORM: u64 = 0x60;
 #[derive(Debug)]
 pub enum ParseError {
     WrongMagicNumber,
-    UnknownSectionId,
+    UnknownSectionId(u64),
     UnsupportedModuleVersion,
     SectionLengthWrong,
     InvalidTypeForm,
-    InvalidValueType,
-    InvalidLangaugeType,
+    InvalidValueType(i64),
+    InvalidLanguageType(i64),
     TooManyReturns,
-    Io(io::Error)
+    Io(io::Error),
+    CustomError(String),
 }
 
-pub trait ModuleParser {
-    fn parse(&self, &mut Read) -> Result<Box<Section>, ParseError>;
+// pub trait ModuleParser {
+//     fn parse(&mut Read) -> Result<Box<Section>, ParseError> where Self: Sized;
+// }
+
+pub struct ModuleParser {
+    sections: HashMap<
+        u64,
+        Box<
+            Fn(&mut Read) -> Result<Box<Section>, ParseError>
+        >
+    >
 }
 
-pub struct ModuleParserInfo {
-    sections: HashMap<i32, Box<ModuleParser>>
-}
+impl ModuleParser {
 
+    pub fn default() -> ModuleParser {
 
-struct X;
-impl ModuleParser for X {
-    fn parse(&self, reader: &mut Read) -> Result<Box<Section>, ParseError> {
-        Err(ParseError::WrongMagicNumber)
-    }
-}
-
-impl ModuleParserInfo {
-    pub fn default() -> ModuleParserInfo {
-        // let f = Box::new(example);
-
-        let mut sections: HashMap<i32, Box<ModuleParser>> = HashMap::new();
-        sections.insert(1, Box::new(X{}));
+        let mut sections: HashMap<u64, Box<Fn(&mut Read) -> Result<Box<Section>, ParseError>>> = HashMap::new();
+        sections.insert(1, Box::new(parse));
         
-        ModuleParserInfo {
+        ModuleParser {
             sections: sections
         }
     }
+
+    pub fn parse_module<T: Read>(&self, mut reader: T) -> Result<Module,ParseError> {
+        let magic_number = reader.read_u32::<LittleEndian>()?;
+        if magic_number != MAGIC_NUMBER {
+            return Err(ParseError::WrongMagicNumber)
+        }
+        let version = reader.read_u32::<LittleEndian>()?;
+        if version != 1 {
+            return Err(ParseError::UnsupportedModuleVersion)
+        } else {
+            let sections = self.parse_sections(&mut reader)?;
+            return Ok(Module{sections:sections, version:version})
+        }
+    }
+
+    fn parse_sections<T: Read>(&self, reader: &mut T) -> Result<Vec<Box<Section>>, ParseError> {
+
+        let mut sections = vec![];
+        loop {
+            let id = match unsigned(&mut reader.bytes()) {
+                Ok(id) => id,
+                Err(_) => break
+            };
+            let section = match self.parse_section(id, reader) {
+                Ok(section) => section,
+                Err(error) => return Err(error)
+            };
+            sections.push(section);
+        }
+        Ok(sections)
+
+    }
+
+    fn parse_section<T: Read>(&self, id: u64, reader: &mut T) -> Result<Box<Section>, ParseError> {
+        println!("{}", id);
+        let parser_function = match self.sections.get(&id) {
+            Some(func) => func,
+            None => return Err(ParseError::UnknownSectionId(id))
+        };
+        let length = unsigned(&mut reader.bytes())?;
+        let mut subreader = reader.take(length);
+        parser_function(&mut subreader)
+        //parser_function.call((Box::new(reader),));
+        //Err(ParseError::WrongMagicNumber)
+
+    }
 }
 
-fn example<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
-    Err(ParseError::WrongMagicNumber)
+fn parse(reader: &mut Read) -> Result<Box<Section>, ParseError> {
+    let count = unsigned(&mut reader.bytes())?;
+    let mut entries: Vec<TypeEntry> = vec![];
+    println!("count {}", count);
+    for entry in 0..count {
+        let form = LanguageType::parse(reader)?;
+        println!("form {:?}", form);
+
+        if form != LanguageType::func {
+            return Err(ParseError::InvalidTypeForm)
+        }
+        let param_count = unsigned(&mut reader.bytes())?;
+        let mut params: Vec<ValueType> = vec![];
+        for param_index in 0..param_count {
+            params.push(ValueType::parse(reader)?);
+        }
+        let return_count =  unsigned(&mut reader.bytes())?;
+        let mut returns: Vec<ValueType> = vec![];
+        if return_count > 1 {
+            return Err(ParseError::TooManyReturns);
+        } else if return_count == 0 {
+
+        } else {
+            returns.push(ValueType::parse(reader)?);
+        }
+        entries.push(TypeEntry{form: form, params: params, returns: returns});
+    }
+    Ok(Box::new(TypeSection{types:entries}))
 }
 
 // sections.insert(2, Module::read_section_imports(&mut subreader));
@@ -78,9 +150,6 @@ fn example<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
         // sections.insert(10, Module::read_section_code(&mut subreader));
         // sections.insert(11, Module::read_section_data(&mut subreader));
 
-pub trait SectionParse {
-	fn parse<T: Read>(reader: T) -> Result<Box<Section>, ParseError>;
-}
 
 impl From<io::Error> for ParseError {
 	fn from(err: io::Error) -> ParseError {
@@ -124,7 +193,7 @@ impl Module {
             // 9 => Module::read_section_elements(&mut subreader),
             // 10=> Module::read_section_code(&mut subreader),
             // 11=> Module::read_section_data(&mut subreader),
-            _ => Err(ParseError::UnknownSectionId)
+            _ => Err(ParseError::UnknownSectionId(id))
         }
     }
 }
