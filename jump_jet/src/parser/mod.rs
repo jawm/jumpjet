@@ -18,10 +18,10 @@ use super::tree::types::*;
 use tree::imports::ImportSection;
 
 mod language_types;
-
+mod types_section;
+mod functions_section;
 
 const MAGIC_NUMBER: u32 = 0x6d736100;
-const FUNC_FORM: u64 = 0x60;
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -37,9 +37,11 @@ pub enum ParseError {
     CustomError(String),
 }
 
-// pub trait ModuleParser {
-//     fn parse(&mut Read) -> Result<Box<Section>, ParseError> where Self: Sized;
-// }
+impl From<io::Error> for ParseError {
+    fn from(err: io::Error) -> ParseError {
+        ParseError::Io(err)
+    }
+}
 
 pub struct ModuleParser {
     sections: HashMap<
@@ -55,8 +57,9 @@ impl ModuleParser {
     pub fn default() -> ModuleParser {
 
         let mut sections: HashMap<u64, Box<Fn(&mut Read) -> Result<Box<Section>, ParseError>>> = HashMap::new();
-        sections.insert(1, Box::new(parse));
-        
+        sections.insert(1, Box::new(types_section::parse));
+        sections.insert(3, Box::new(functions_section::parse));
+
         ModuleParser {
             sections: sections
         }
@@ -95,7 +98,6 @@ impl ModuleParser {
     }
 
     fn parse_section<T: Read>(&self, id: u64, reader: &mut T) -> Result<Box<Section>, ParseError> {
-        println!("{}", id);
         let parser_function = match self.sections.get(&id) {
             Some(func) => func,
             None => return Err(ParseError::UnknownSectionId(id))
@@ -103,58 +105,7 @@ impl ModuleParser {
         let length = unsigned(&mut reader.bytes())?;
         let mut subreader = reader.take(length);
         parser_function(&mut subreader)
-        //parser_function.call((Box::new(reader),));
-        //Err(ParseError::WrongMagicNumber)
-
     }
-}
-
-fn parse(reader: &mut Read) -> Result<Box<Section>, ParseError> {
-    let count = unsigned(&mut reader.bytes())?;
-    let mut entries: Vec<TypeEntry> = vec![];
-    println!("count {}", count);
-    for entry in 0..count {
-        let form = LanguageType::parse(reader)?;
-        println!("form {:?}", form);
-
-        if form != LanguageType::func {
-            return Err(ParseError::InvalidTypeForm)
-        }
-        let param_count = unsigned(&mut reader.bytes())?;
-        let mut params: Vec<ValueType> = vec![];
-        for param_index in 0..param_count {
-            params.push(ValueType::parse(reader)?);
-        }
-        let return_count =  unsigned(&mut reader.bytes())?;
-        let mut returns: Vec<ValueType> = vec![];
-        if return_count > 1 {
-            return Err(ParseError::TooManyReturns);
-        } else if return_count == 0 {
-
-        } else {
-            returns.push(ValueType::parse(reader)?);
-        }
-        entries.push(TypeEntry{form: form, params: params, returns: returns});
-    }
-    Ok(Box::new(TypeSection{types:entries}))
-}
-
-// sections.insert(2, Module::read_section_imports(&mut subreader));
-        // sections.insert(3, Module::read_section_functions(&mut subreader));
-        // sections.insert(4, Module::read_section_table(&mut subreader));
-        // sections.insert(5, Module::read_section_memory(&mut subreader));
-        // sections.insert(6, Module::read_section_global(&mut subreader));
-        // sections.insert(7, Module::read_section_exports(&mut subreader));
-        // sections.insert(8, Module::read_section_start(&mut subreader));
-        // sections.insert(9, Module::read_section_elements(&mut subreader));
-        // sections.insert(10, Module::read_section_code(&mut subreader));
-        // sections.insert(11, Module::read_section_data(&mut subreader));
-
-
-impl From<io::Error> for ParseError {
-	fn from(err: io::Error) -> ParseError {
-		ParseError::Io(err)
-	}
 }
 
 impl Module {
@@ -196,72 +147,4 @@ impl Module {
             _ => Err(ParseError::UnknownSectionId(id))
         }
     }
-}
-
-fn read_section_types<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
-    let count = unsigned(&mut reader.bytes())?;
-    let mut entries: Vec<TypeEntry> = vec![];
-    for entry in 0..count {
-        let form = LanguageType::parse(reader)?;
-
-        if form != LanguageType::func {
-            return Err(ParseError::InvalidTypeForm)
-        }
-        let param_count = unsigned(&mut reader.bytes())?;
-        let mut params: Vec<ValueType> = vec![];
-        for param_index in 0..param_count {
-            params.push(ValueType::parse(reader)?);
-        }
-        let return_count =  unsigned(&mut reader.bytes())?;
-        let mut returns: Vec<ValueType> = vec![];
-        if return_count > 1 {
-            return Err(ParseError::TooManyReturns);
-        } else if return_count == 0 {
-
-        } else {
-            returns.push(ValueType::parse(reader)?);
-        }
-        entries.push(TypeEntry{form: form, params: params, returns: returns});
-    }
-    Ok(Box::new(TypeSection{types:entries}))
-}
-
-fn read_section_imports<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
-    Err(ParseError::WrongMagicNumber)
-}
-
-fn read_section_functions<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
-    Err(ParseError::WrongMagicNumber)
-}
-
-fn read_section_table<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
-    Err(ParseError::WrongMagicNumber)
-}
-
-fn read_section_memory<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
-    Err(ParseError::WrongMagicNumber)
-}
-
-fn read_section_global<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
-    Err(ParseError::WrongMagicNumber)
-}
-
-fn read_section_exports<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
-    Err(ParseError::WrongMagicNumber)
-}
-
-fn read_section_start<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
-    Err(ParseError::WrongMagicNumber)
-}
-
-fn read_section_elements<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
-    Err(ParseError::WrongMagicNumber)
-}
-
-fn read_section_code<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
-    Err(ParseError::WrongMagicNumber)
-}
-
-fn read_section_data<T: Read>(reader: T) -> Result<Box<Section>, ParseError> {
-    Err(ParseError::WrongMagicNumber)
 }
