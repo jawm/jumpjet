@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Read;
 
 pub mod section;
@@ -15,6 +16,6 @@ pub mod code;
 pub mod data;
 
 pub struct Module {
-	pub sections: Vec<Box<section::Section>>,
+	pub sections: HashMap<u64, Box<section::Section>>,
 	pub version: u32
 }

@@ -1,11 +1,13 @@
-
+use tree::section::Section;
 
 pub struct DataSection {
-	entries: Vec<DataSegment>
+	pub entries: Vec<DataSegment>
 }
 
 pub struct DataSegment {
-	index: u64,
-	offset: i64, // TODO needs to be init_expr
-	data: Vec<u8>
+	pub index: u64,
+	pub offset: i64, // TODO needs to be init_expr
+	pub data: Vec<u8>
 }
+
+impl Section for DataSection {}

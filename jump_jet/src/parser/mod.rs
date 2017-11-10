@@ -18,8 +18,14 @@ use super::tree::types::*;
 use tree::imports::ImportSection;
 
 mod language_types;
+
 mod types_section;
 mod functions_section;
+mod tables_section;
+mod exports_section;
+mod elements_section;
+mod code_section;
+mod data_section;
 
 const MAGIC_NUMBER: u32 = 0x6d736100;
 
@@ -32,6 +38,7 @@ pub enum ParseError {
     InvalidTypeForm,
     InvalidValueType(i64),
     InvalidLanguageType(i64),
+    InvalidExternalKind(u8),
     TooManyReturns,
     Io(io::Error),
     CustomError(String),
@@ -47,7 +54,7 @@ pub struct ModuleParser {
     sections: HashMap<
         u64,
         Box<
-            Fn(&mut Read) -> Result<Box<Section>, ParseError>
+            Fn(&mut Read, &HashMap<u64, Box<Section>>) -> Result<Box<Section>, ParseError>
         >
     >
 }
@@ -56,9 +63,14 @@ impl ModuleParser {
 
     pub fn default() -> ModuleParser {
 
-        let mut sections: HashMap<u64, Box<Fn(&mut Read) -> Result<Box<Section>, ParseError>>> = HashMap::new();
-        sections.insert(1, Box::new(types_section::parse));
-        sections.insert(3, Box::new(functions_section::parse));
+        let mut sections: HashMap<u64, Box<Fn(&mut Read, &HashMap<u64, Box<Section>>) -> Result<Box<Section>, ParseError>>> = HashMap::new();
+        sections.insert(1,  Box::new(types_section::parse));
+        sections.insert(3,  Box::new(functions_section::parse));
+        sections.insert(4,  Box::new(tables_section::parse));
+        sections.insert(7,  Box::new(exports_section::parse));
+        sections.insert(9,  Box::new(elements_section::parse));
+        sections.insert(10, Box::new(code_section::parse));
+        sections.insert(11, Box::new(data_section::parse));
 
         ModuleParser {
             sections: sections
@@ -79,72 +91,77 @@ impl ModuleParser {
         }
     }
 
-    fn parse_sections<T: Read>(&self, reader: &mut T) -> Result<Vec<Box<Section>>, ParseError> {
+    fn parse_sections<T: Read>(&self, reader: &mut T) -> Result<HashMap<u64, Box<Section>>, ParseError> {
 
-        let mut sections = vec![];
+        let mut sections = HashMap::new();
         loop {
             let id = match unsigned(&mut reader.bytes()) {
                 Ok(id) => id,
                 Err(_) => break
             };
-            let section = match self.parse_section(id, reader) {
+            println!("parsing section {}", id);
+            let section = match self.parse_section(id, reader, &sections) {
                 Ok(section) => section,
-                Err(error) => return Err(error)
+                Err(error) => {
+                    println!("Failure parsing section {}", id);
+                    return Err(error)
+                }
             };
-            sections.push(section);
+            println!("Section parsed {}", id);
+            sections.insert(id, section);
         }
         Ok(sections)
 
     }
 
-    fn parse_section<T: Read>(&self, id: u64, reader: &mut T) -> Result<Box<Section>, ParseError> {
+    fn parse_section<T: Read>(&self, id: u64, reader: &mut T, sections: &HashMap<u64, Box<Section>>) -> Result<Box<Section>, ParseError> {
         let parser_function = match self.sections.get(&id) {
             Some(func) => func,
             None => return Err(ParseError::UnknownSectionId(id))
         };
         let length = unsigned(&mut reader.bytes())?;
         let mut subreader = reader.take(length);
-        parser_function(&mut subreader)
+        parser_function(&mut subreader, sections)
     }
 }
 
 impl Module {
 
-    pub fn parse<T: Read>(mut reader: T) -> Result<Module, ParseError> {
-        let magic_number = reader.read_u32::<LittleEndian>()?;
-        if magic_number != MAGIC_NUMBER {
-            return Err(ParseError::WrongMagicNumber)
-        }
-        let version = reader.read_u32::<LittleEndian>()?;
-        if version != 1 {
-            return Err(ParseError::UnsupportedModuleVersion)
-        } else {
-            let sections = Module::parse_sections(&mut reader)?;
-            return Ok(Module{sections:sections, version:version})
-        }
-    }
+    // pub fn parse<T: Read>(mut reader: T) -> Result<Module, ParseError> {
+    //     let magic_number = reader.read_u32::<LittleEndian>()?;
+    //     if magic_number != MAGIC_NUMBER {
+    //         return Err(ParseError::WrongMagicNumber)
+    //     }
+    //     let version = reader.read_u32::<LittleEndian>()?;
+    //     if version != 1 {
+    //         return Err(ParseError::UnsupportedModuleVersion)
+    //     } else {
+    //         let sections = Module::parse_sections(&mut reader)?;
+    //         return Ok(Module{sections:sections, version:version})
+    //     }
+    // }
 
-    fn parse_sections<T: Read>(reader: &mut T) -> Result<Vec<Box<Section>>, ParseError> {
-        Ok(vec![])
-    }
+    // fn parse_sections<T: Read>(reader: &mut T) -> Result<Vec<Box<Section>>, ParseError> {
+    //     Ok(vec![])
+    // }
 
-    fn parse_section<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
-        let id = unsigned(&mut reader.bytes())?;
-        let length = unsigned(&mut reader.bytes())?;
-        let mut subreader = reader.take(length);
-        return match id {
-            // 1 => Module::read_section_types(&mut subreader),
-            // 2 => Module::read_section_imports(&mut subreader),
-            // 3 => Module::read_section_functions(&mut subreader),
-            // 4 => Module::read_section_table(&mut subreader),
-            // 5 => Module::read_section_memory(&mut subreader),
-            // 6 => Module::read_section_global(&mut subreader),
-            // 7 => Module::read_section_exports(&mut subreader),
-            // 8 => Module::read_section_start(&mut subreader),
-            // 9 => Module::read_section_elements(&mut subreader),
-            // 10=> Module::read_section_code(&mut subreader),
-            // 11=> Module::read_section_data(&mut subreader),
-            _ => Err(ParseError::UnknownSectionId(id))
-        }
-    }
+    // fn parse_section<T: Read>(reader: &mut T) -> Result<Box<Section>, ParseError> {
+    //     let id = unsigned(&mut reader.bytes())?;
+    //     let length = unsigned(&mut reader.bytes())?;
+    //     let mut subreader = reader.take(length);
+    //     return match id {
+    //         // 1 => Module::read_section_types(&mut subreader),
+    //         // 2 => Module::read_section_imports(&mut subreader),
+    //         // 3 => Module::read_section_functions(&mut subreader),
+    //         // 4 => Module::read_section_table(&mut subreader),
+    //         // 5 => Module::read_section_memory(&mut subreader),
+    //         // 6 => Module::read_section_global(&mut subreader),
+    //         // 7 => Module::read_section_exports(&mut subreader),
+    //         // 8 => Module::read_section_start(&mut subreader),
+    //         // 9 => Module::read_section_elements(&mut subreader),
+    //         // 10=> Module::read_section_code(&mut subreader),
+    //         // 11=> Module::read_section_data(&mut subreader),
+    //         _ => Err(ParseError::UnknownSectionId(id))
+    //     }
+    // }
 }

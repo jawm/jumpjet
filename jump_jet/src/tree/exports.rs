@@ -1,11 +1,13 @@
 use super::language_types::ExternalKind;
+use tree::section::Section;
 
 pub struct ExportSection {
-	entries: Vec<ExportEntry>
+	pub entries: Vec<ExportEntry>
 }
 
 pub struct ExportEntry {
-	field: String,
-	kind: ExternalKind,
-	index: u64
+	pub field: String,
+	pub kind: ExternalKind
 }
+
+impl Section for ExportSection {}

@@ -1,5 +1,6 @@
 // TODO switch from enums to a bunch of structs instead.
 
+#[derive(Debug)]
 pub enum ValueType {
 	i_32,
 	i_64,
@@ -21,24 +22,32 @@ pub enum LanguageType {
 
 pub enum ExternalKind {
 	function(u64), // possibly have it go into the types section, instead of storing index
-	table(TableType), 
-	memory(ResizableLimits),
-	global(GlobalType)
+	table(u64), 
+	memory(u64),
+	global(u64)
 }
 
 pub struct TableType {
-	elemType: i64,
-	limits: ResizableLimits
+	pub elemType: i64,
+	pub limits: ResizableLimits
 }
 
 pub struct ResizableLimits {
-	initial: u64,
-	maximum: Option<u64>
+	pub initial: u64,
+	pub maximum: Option<u64>
 }
 
 pub struct GlobalType {
 	contentType: ValueType,
 	mutability: bool
+}
+
+pub enum InitExpressions {
+	i32_const(i64),
+	i64_const(i64),
+	f32_const(u64),
+	f64_const(u64),
+	get_global(u64),
 }
 
 pub enum Operation {

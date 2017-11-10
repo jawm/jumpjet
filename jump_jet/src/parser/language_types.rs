@@ -1,8 +1,11 @@
 extern crate leb;
 use self::leb::signed;
+use self::leb::unsigned;
 
-use super::super::tree::language_types::{ValueType, LanguageType};
+use super::super::tree::language_types::{ValueType, LanguageType, ExternalKind};
 use super::ParseError;
+
+use parser::byteorder::ReadBytesExt;
 
 use std::io::Read;
 
@@ -40,5 +43,19 @@ impl LanguageType {
 			0x40 => Ok(LanguageType::empty_block),
 			_    => Err(ParseError::InvalidLanguageType(key))
 		}
+	}
+}
+
+impl ExternalKind {
+	pub fn parse(reader: &mut Read) -> Result<ExternalKind, ParseError> {
+		let external_kind = reader.read_u8()?;
+		let index = unsigned(&mut reader.bytes())?;
+		Ok(match external_kind {
+			0 => ExternalKind::function(index),
+			1 => ExternalKind::table(index),
+			2 => ExternalKind::memory(index),
+			3 => ExternalKind::global(index),
+			_ => return Err(ParseError::InvalidExternalKind(external_kind))
+		})
 	}
 }

@@ -1,9 +1,13 @@
+use tree::section::Section;
+
 pub struct ElementSection {
-	entries: Vec<ElementSegment>
+	pub entries: Vec<ElementSegment>
 }
 
 pub struct ElementSegment {
-	index: u64,
-	offset: i64, // TODO needs to be init_expr
-	elements: Vec<u64>
+	pub index: u64,
+	pub offset: i64, // TODO needs to be init_expr
+	pub elements: Vec<u64>
 }
+
+impl Section for ElementSection {}

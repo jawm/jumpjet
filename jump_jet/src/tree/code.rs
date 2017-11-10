@@ -2,12 +2,12 @@ use tree::section::Section;
 use super::language_types::{Operation, ValueType};
 
 pub struct CodeSection {
-	function_bodies: Vec<FunctionBody>
+	pub function_bodies: Vec<FunctionBody>
+}
+
+pub struct FunctionBody {
+	pub locals: Vec<ValueType>,
+	pub code: Vec<Operation>
 }
 
 impl Section for CodeSection {}
-
-pub struct FunctionBody {
-	locals: Vec<ValueType>,
-	code: Vec<Operation>
-}

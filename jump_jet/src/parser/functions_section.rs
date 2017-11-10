@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Read;
 
 use parser::leb::unsigned;
@@ -10,7 +11,7 @@ use tree::types::TypeEntry;
 use tree::functions::FunctionSection;
 
 
-pub fn parse(reader: &mut Read) -> Result<Box<Section>, ParseError> {
+pub fn parse(reader: &mut Read, sections: &HashMap<u64, Box<Section>>) -> Result<Box<Section>, ParseError> {
     let count = unsigned(&mut reader.bytes())?;
     let mut entries: Vec<u64> = vec![];
     for entry in 0..count {

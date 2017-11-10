@@ -1,5 +1,9 @@
 use super::language_types::TableType;
 
+use tree::section::Section;
+
 pub struct TableSection {
-	entries: Vec<TableType>
+	pub entries: Vec<TableType>
 }
+
+impl Section for TableSection {}
