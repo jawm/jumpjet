@@ -7,7 +7,7 @@ use std::fs::File;
 use std::error::Error;
 use std::path::Path;
 
-use parser::ParseError;
+
 use parser::ModuleParser;
 
 pub struct Runtime {
@@ -52,6 +52,9 @@ impl Runtime {
             Ok(module) => module,
             Err(err) => panic!("Failed to parse module: {:?}", err)
         };
+
+        use tree::types::TypeSection;
+        module.get_section::<TypeSection>(1);
 
         self.modules.insert(name.to_string(), module);
     }

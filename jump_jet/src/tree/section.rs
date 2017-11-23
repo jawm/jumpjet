@@ -1,3 +1,8 @@
+extern crate mopa;
+use mopa::Any;
+
+use std::fmt::Debug;
+
 use super::types::TypeSection;
 use super::imports::ImportSection;
 use super::functions::FunctionSection;
@@ -10,20 +15,17 @@ use super::elements::ElementSection;
 use super::code::CodeSection;
 use super::data::DataSection;
 
-// pub enum Section {
-// 	Type(TypeSection),
-// 	Import(ImportSection),
-// 	Function(FunctionSection),
-// 	Table(TableSection),
-// 	Memory(MemorySection),
-// 	Global(GlobalSection),
-// 	Export(ExportSection),
-// 	Start(StartSection),
-// 	Element(ElementSection),
-// 	Code(CodeSection),
-// 	Data(DataSection)
-// }
 
-pub trait Section {
-	
+
+pub trait Section: Debug + Any {}
+mopafy!(Section);
+
+#[derive(Debug)]
+struct Test {}
+
+impl Section for Test {}
+
+fn test () {
+	let a: Box<Section> = Box::new(Test{});
+	a.is::<Test>();
 }

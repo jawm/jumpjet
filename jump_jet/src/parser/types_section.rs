@@ -4,6 +4,7 @@ use std::io::Read;
 use parser::leb::unsigned;
 use parser::ParseError;
 
+use tree::Module;
 use tree::section::Section;
 use tree::language_types::LanguageType;
 use tree::language_types::ValueType;
@@ -11,7 +12,7 @@ use tree::types::TypeEntry;
 use tree::types::TypeSection;
 
 
-pub fn parse(reader: &mut Read, sections: &HashMap<u64, Box<Section>>) -> Result<Box<Section>, ParseError> {
+pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError> {
     let count = unsigned(&mut reader.bytes())?;
     let mut entries: Vec<TypeEntry> = vec![];
     for entry in 0..count {

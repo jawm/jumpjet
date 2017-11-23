@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::io::Read;
 
-use parser::byteorder::ReadBytesExt;
 use parser::leb::unsigned;
 use parser::leb::signed;
 use parser::ParseError;

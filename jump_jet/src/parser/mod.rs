@@ -41,6 +41,7 @@ pub enum ParseError {
     InvalidExternalKind(u8),
     TooManyReturns,
     Io(io::Error),
+    NonExistantTypeReference,
     CustomError(String),
 }
 
@@ -54,7 +55,7 @@ pub struct ModuleParser {
     sections: HashMap<
         u64,
         Box<
-            Fn(&mut Read, &HashMap<u64, Box<Section>>) -> Result<Box<Section>, ParseError>
+            Fn(&mut Read, &Module) -> Result<Box<Section>, ParseError>
         >
     >
 }
@@ -63,14 +64,14 @@ impl ModuleParser {
 
     pub fn default() -> ModuleParser {
 
-        let mut sections: HashMap<u64, Box<Fn(&mut Read, &HashMap<u64, Box<Section>>) -> Result<Box<Section>, ParseError>>> = HashMap::new();
+        let mut sections: HashMap<u64, Box<Fn(&mut Read, &Module) -> Result<Box<Section>, ParseError>>> = HashMap::new();
         sections.insert(1,  Box::new(types_section::parse));
         sections.insert(3,  Box::new(functions_section::parse));
-        sections.insert(4,  Box::new(tables_section::parse));
-        sections.insert(7,  Box::new(exports_section::parse));
-        sections.insert(9,  Box::new(elements_section::parse));
-        sections.insert(10, Box::new(code_section::parse));
-        sections.insert(11, Box::new(data_section::parse));
+        // sections.insert(4,  Box::new(tables_section::parse));
+        // sections.insert(7,  Box::new(exports_section::parse));
+        // sections.insert(9,  Box::new(elements_section::parse));
+        // sections.insert(10, Box::new(code_section::parse));
+        // sections.insert(11, Box::new(data_section::parse));
 
         ModuleParser {
             sections: sections
@@ -86,21 +87,23 @@ impl ModuleParser {
         if version != 1 {
             return Err(ParseError::UnsupportedModuleVersion)
         } else {
-            let sections = self.parse_sections(&mut reader)?;
-            return Ok(Module{sections:sections, version:version})
+            let mut sections = HashMap::new();
+            let mut module = Module {sections: sections, version: version};
+            self.parse_sections(&mut module, &mut reader)?;
+            println!("it's a thinkg {:?} ", module.get_section::<TypeSection>(1).is_some());
+            return Ok(module)
         }
     }
 
-    fn parse_sections<T: Read>(&self, reader: &mut T) -> Result<HashMap<u64, Box<Section>>, ParseError> {
+    fn parse_sections<'a, T: Read>(&self, module: &'a mut Module, reader: &mut T) -> Result<&'a mut Module, ParseError> {
 
-        let mut sections = HashMap::new();
         loop {
             let id = match unsigned(&mut reader.bytes()) {
                 Ok(id) => id,
                 Err(_) => break
             };
             println!("parsing section {}", id);
-            let section = match self.parse_section(id, reader, &sections) {
+            let section = match self.parse_section(id, reader, &module) {
                 Ok(section) => section,
                 Err(error) => {
                     println!("Failure parsing section {}", id);
@@ -108,20 +111,20 @@ impl ModuleParser {
                 }
             };
             println!("Section parsed {}", id);
-            sections.insert(id, section);
+            module.sections.insert(id, section);
         }
-        Ok(sections)
+        Ok(module)
 
     }
 
-    fn parse_section<T: Read>(&self, id: u64, reader: &mut T, sections: &HashMap<u64, Box<Section>>) -> Result<Box<Section>, ParseError> {
+    fn parse_section<T: Read>(&self, id: u64, reader: &mut T, module: &Module) -> Result<Box<Section>, ParseError> {
         let parser_function = match self.sections.get(&id) {
             Some(func) => func,
             None => return Err(ParseError::UnknownSectionId(id))
         };
         let length = unsigned(&mut reader.bytes())?;
         let mut subreader = reader.take(length);
-        parser_function(&mut subreader, sections)
+        parser_function(&mut subreader, module)
     }
 }
 

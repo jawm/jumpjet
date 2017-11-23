@@ -4,7 +4,6 @@ use self::leb::signed;
 use self::leb::unsigned;
 use self::byteorder::ByteOrder;
 use self::byteorder::LittleEndian;
-use self::byteorder::BigEndian;
 use std::io::Cursor;
 use std::io::Error;
 use std::io::Read;
