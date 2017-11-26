@@ -1,4 +1,3 @@
-extern crate mopa;
 use mopa::Any;
 
 use std::collections::HashMap;
@@ -24,8 +23,8 @@ pub struct Module {
 
 impl Module {
     pub fn get_section<T: section::Section>(&self, index: i32) -> Option<T> {
-    	let value = self.sections.get(&1).unwrap();
-    	//value.is::<section::Section>();
+    	let value: &Box<section::Section> = self.sections.get(&1).unwrap();
+    	value.is::<section::Section>();
     	None
         // let option_value = self.sections.get(&1);
         // match option_value {

@@ -1,4 +1,3 @@
-extern crate mopa;
 use mopa::Any;
 
 use std::fmt::Debug;
@@ -17,15 +16,5 @@ use super::data::DataSection;
 
 
 
-pub trait Section: Debug + Any {}
+pub trait Section: Any {}
 mopafy!(Section);
-
-#[derive(Debug)]
-struct Test {}
-
-impl Section for Test {}
-
-fn test () {
-	let a: Box<Section> = Box::new(Test{});
-	a.is::<Test>();
-}
