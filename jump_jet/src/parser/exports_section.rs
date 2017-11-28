@@ -1,13 +1,10 @@
 use std::collections::HashMap;
 use std::io::Read;
 
-use parser::byteorder::ReadBytesExt;
 use parser::leb::unsigned;
-use parser::leb::signed;
 use parser::ParseError;
 
 use tree::language_types::ExternalKind;
-use tree::language_types::TableType;
 use tree::section::Section;
 use tree::exports::ExportSection;
 use tree::exports::ExportEntry;

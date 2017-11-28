@@ -2,7 +2,6 @@ extern crate byteorder;
 extern crate leb;
 use self::byteorder::ReadBytesExt;
 use self::byteorder::LittleEndian;
-use self::leb::signed;
 use self::leb::unsigned;
 
 use std::io;

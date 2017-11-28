@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate mopa;
 
-use std::io::prelude::*;
 use std::io::Cursor;
 use std::fs::File;
 use std::error::Error;

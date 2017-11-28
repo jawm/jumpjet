@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::io::Read;
 
 use parser::leb::unsigned;

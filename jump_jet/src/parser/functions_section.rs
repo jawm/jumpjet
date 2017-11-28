@@ -1,5 +1,3 @@
-use std::any::Any;
-use std::collections::HashMap;
 use std::io::Read;
 
 use parser::leb::unsigned;
@@ -7,9 +5,6 @@ use parser::ParseError;
 
 use tree::Module;
 use tree::section::Section;
-use tree::language_types::LanguageType;
-use tree::language_types::ValueType;
-use tree::types::TypeEntry;
 use tree::types::TypeSection;
 use tree::functions::FunctionSection;
 
