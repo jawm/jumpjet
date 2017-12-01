@@ -15,7 +15,7 @@ pub struct Runtime {
         String, 
         HashMap<
             String,
-            fn(Vec<ValueType>) -> Vec<ValueType>
+            fn(Vec<Box<ValueType>>) -> Vec<Box<ValueType>>
         >
     >,
     modules: HashMap<String, Module>,
@@ -31,7 +31,7 @@ impl Runtime {
         }
     }
 
-    pub fn expose(&mut self, namespace: &str, functions: Vec<fn(Vec<ValueType>)->Vec<ValueType>>) {
+    pub fn expose(&mut self, namespace: &str, functions: Vec<fn(Vec<Box<ValueType>>)->Vec<Box<ValueType>>>) {
         println!("Exposing functions under a namespace");
     }
 

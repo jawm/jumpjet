@@ -111,7 +111,7 @@ pub struct ResizableLimits {
 
 #[derive(Debug)]
 pub struct GlobalType {
-    pub contentType: ValueType,
+    pub contentType: Box<ValueType>,
     pub mutability: bool,
 }
 

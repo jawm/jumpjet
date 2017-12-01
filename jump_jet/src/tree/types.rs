@@ -12,7 +12,7 @@ impl Section for TypeSection {}
 #[derive(Debug)]
 #[derive(Clone)]
 pub struct TypeEntry {
-    pub form: LanguageType, //almost certainly 'func'
-    pub params: Vec<ValueType>,
-    pub returns: Vec<ValueType>, // for now, at most length 1
+    pub form: Box<LanguageType>, //almost certainly 'func'
+    pub params: Vec<Box<ValueType>>,
+    pub returns: Vec<Box<ValueType>>, // for now, at most length 1
 }
