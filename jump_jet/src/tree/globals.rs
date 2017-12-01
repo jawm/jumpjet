@@ -1,10 +1,13 @@
 use super::language_types::GlobalType;
+use tree::section::Section;
 
 pub struct GlobalSection {
-	entries: Vec<GlobalEntry>
+	pub entries: Vec<GlobalEntry>
 }
 
+impl Section for GlobalSection {}
+
 pub struct GlobalEntry {
-	data_type: GlobalType,
-	initial: i64// TODO figure out init_expr
+	pub data_type: GlobalType,
+	pub initial: i64// TODO figure out init_expr
 }

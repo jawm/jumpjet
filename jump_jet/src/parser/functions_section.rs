@@ -15,11 +15,17 @@ pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseEr
     let mut entries = vec![];
     for entry in 0..count {
         let index = unsigned(&mut reader.bytes())?;
-        //let function = sections.get(&1).expect("didn't exist");
-        //println!("{:?}", function.downcast::<TypeSection>());
-        entries.push(index);
+        match module.get_section::<TypeSection>(0) {
+            Some(section) => {
+                let signature = &section.types[index as usize];
+                entries.push(signature.clone());
+            },
+            None => {
+                return Err(ParseError::NonExistantTypeReference);
+            }
+        }
     }
     Ok(Box::new(FunctionSection{
-        functions: vec![]
+        functions: entries
     }))
 }

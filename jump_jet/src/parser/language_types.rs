@@ -5,6 +5,8 @@ use self::leb::unsigned;
 use super::super::tree::language_types::{ValueType, LanguageType, ExternalKind};
 use super::ParseError;
 
+use tree::language_types::ResizableLimits;
+use tree::language_types::GlobalType;
 use parser::byteorder::ReadBytesExt;
 
 use std::io::Read;
@@ -56,6 +58,30 @@ impl ExternalKind {
 			2 => ExternalKind::memory(index),
 			3 => ExternalKind::global(index),
 			_ => return Err(ParseError::InvalidExternalKind(external_kind))
+		})
+	}
+}
+
+impl ResizableLimits {
+	pub fn parse(reader: &mut Read) -> Result<ResizableLimits, ParseError> {
+		let flags = unsigned(&mut reader.bytes())?;
+		let initial = unsigned(&mut reader.bytes())?;
+        let maximum = if flags == 1 {
+            Some(unsigned(&mut reader.bytes())?)
+        } else {
+            None
+        };
+        Ok(ResizableLimits{initial: initial, maximum:maximum})
+	}
+}
+
+impl GlobalType {
+	pub fn parse(reader: &mut Read) -> Result<GlobalType, ParseError> {
+		let value_type = ValueType::parse(reader)?;
+		let mutable = unsigned(&mut reader.bytes())?;
+		Ok(GlobalType {
+			contentType: value_type,
+			mutability: mutable == 1
 		})
 	}
 }

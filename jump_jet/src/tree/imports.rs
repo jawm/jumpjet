@@ -1,11 +1,14 @@
 use super::language_types::ExternalKind;
+use tree::section::Section;
 
 pub struct ImportSection {
-	entries: Vec<ImportEntry>
+	pub entries: Vec<ImportEntry>
 }
 
+impl Section for ImportSection {}
+
 pub struct ImportEntry {
-	module: String,
-	field: String,
-	kind: ExternalKind
+	pub module: String,
+	pub field: String,
+	pub kind: ExternalKind
 }

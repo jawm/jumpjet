@@ -22,8 +22,8 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn get_section<T: section::Section>(&self, index: i32) -> Option<&T> {
-    	let value: &Box<section::Section> = self.sections.get(&1).unwrap();
+    pub fn get_section<T: section::Section>(&self, index: u64) -> Option<&T> {
+    	let value: &Box<section::Section> = self.sections.get(&index).unwrap();
     	value.downcast_ref::<T>()
     }
 }

@@ -1,24 +1,93 @@
 // TODO switch from enums to a bunch of structs instead.
+use std::clone::Clone;
 
-#[derive(Debug)]
-pub enum ValueType {
-    i_32,
-    i_64,
-    f_32,
-    f_64,
+macro_rules! language_type {
+    ($name:ident) => {
+        pub struct $name {}
+        impl LanguageType for $name {}
+    }
 }
 
-#[derive(PartialEq)]
-#[derive(Debug)]
-pub enum LanguageType {
-    i_32,
-    i_64,
-    f_32,
-    f_64,
-    anyfunc, // no static signature validation check
-    func,
-    empty_block,
+macro_rules! language_types {
+    ($($name:ident);*) => {
+        $(
+            language_type!($name);
+        )*
+    }
 }
+
+macro_rules! value_type {
+    ($name:ident) => {
+        language_type!($name);
+        impl ValueType for $name {}
+    }
+}
+
+macro_rules! value_types {
+    ($($name:ident);*) => {
+        $(
+            value_type!($name);
+        )*
+    }
+}
+
+pub trait LanguageType {}
+pub trait ValueType : LanguageType {}
+
+value_types!(
+    i_32;
+    i_64;
+    f_32;
+    f_64);
+language_types!(
+    anyfunc;
+    func;
+    empty_block);
+
+// macro_rules! language_types {
+//     ($($name:ident);*;$()*) => {
+//         $(
+//             language_type!($name);
+//         )*
+//     }
+// }
+
+// language_types!(
+//     anyfunc;
+//     func;
+//     empty_block;
+//     value_types!(
+//         I32;
+//         I64;
+//         F32;
+//         F64;
+//     );
+// );
+
+
+
+
+// #[derive(Debug)]
+// #[derive(Clone)]
+// pub enum ValueType {
+//     i_32,
+//     i_64,
+//     f_32,
+//     f_64,
+// }
+
+// #[derive(PartialEq)]
+// #[derive(Debug)]
+// #[derive(Clone)]
+// pub enum LanguageType {
+//     i_32,
+//     i_64,
+//     f_32,
+//     f_64,
+//     anyfunc, // no static signature validation check
+//     func,
+//     empty_block,
+// }
 
 #[derive(Debug)]
 pub enum ExternalKind {
@@ -42,8 +111,8 @@ pub struct ResizableLimits {
 
 #[derive(Debug)]
 pub struct GlobalType {
-    contentType: ValueType,
-    mutability: bool,
+    pub contentType: ValueType,
+    pub mutability: bool,
 }
 
 #[derive(Debug)]

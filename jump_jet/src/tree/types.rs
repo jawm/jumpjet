@@ -1,5 +1,6 @@
 use tree::section::Section;
 use super::language_types::{LanguageType, ValueType};
+use std::clone::Clone;
 
 #[derive(Debug)]
 pub struct TypeSection {
@@ -9,6 +10,7 @@ pub struct TypeSection {
 impl Section for TypeSection {}
 
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct TypeEntry {
     pub form: LanguageType, //almost certainly 'func'
     pub params: Vec<ValueType>,
