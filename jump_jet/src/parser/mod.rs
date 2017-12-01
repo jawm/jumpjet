@@ -31,14 +31,6 @@ mod elements_section;
 mod code_section;
 mod data_section;
 
-pub trait Parser {
-    type Item;
-    fn parse(reader: &mut Read) -> Result<Box<Self::Item>, ParseError>;
-}
-
-
-
-
 const MAGIC_NUMBER: u32 = 0x6d736100;
 
 #[derive(Debug)]
