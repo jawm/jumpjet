@@ -20,6 +20,4 @@ fn main() {
         Some(module) => module.run(),
         None         => println!("The module failed to load! Quitting or something")
     }
-
-    //let module = jump_jet::build_module("program.wasm");
 }
