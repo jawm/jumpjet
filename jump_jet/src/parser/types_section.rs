@@ -1,6 +1,7 @@
 use std::io::Read;
 
 use parser::leb::unsigned;
+use parser::Parse;
 use parser::ParseError;
 
 use tree::Module;
@@ -36,4 +37,11 @@ pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseEr
         entries.push(TypeEntry{form: form, params: params, returns: returns});
     }
     Ok(Box::new(TypeSection{types:entries}))
+}
+
+
+impl Parse for TypeSection {
+    fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError> {
+        Err(ParseError::WrongMagicNumber)
+    }
 }

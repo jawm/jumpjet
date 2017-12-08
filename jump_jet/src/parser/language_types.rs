@@ -36,10 +36,10 @@ impl LanguageType {
 
 	fn get(key: i64) -> Result<LanguageType, ParseError> {
 		match key {
-			0x7f => Ok(LanguageType::i_32),
-			0x7e => Ok(LanguageType::i_64),
-			0x7d => Ok(LanguageType::f_32),
-			0x7c => Ok(LanguageType::f_64),
+			0x7f => Ok(LanguageType::value(ValueType::i_32)),
+			0x7e => Ok(LanguageType::value(ValueType::i_64)),
+			0x7d => Ok(LanguageType::value(ValueType::f_32)),
+			0x7c => Ok(LanguageType::value(ValueType::f_64)),
 			0x70 => Ok(LanguageType::anyfunc),
 			0x60 => Ok(LanguageType::func),
 			0x40 => Ok(LanguageType::empty_block),

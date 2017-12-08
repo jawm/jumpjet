@@ -1,74 +1,8 @@
-// TODO switch from enums to a bunch of structs instead.
 use std::clone::Clone;
-
-// macro_rules! language_type {
-//     ($name:ident) => {
-//         pub struct $name {}
-//         impl LanguageType for $name {}
-//     }
-// }
-
-// macro_rules! language_types {
-//     ($($name:ident);*) => {
-//         $(
-//             language_type!($name);
-//         )*
-//     }
-// }
-
-// macro_rules! value_type {
-//     ($name:ident) => {
-//         language_type!($name);
-//         impl ValueType for $name {}
-//     }
-// }
-
-// macro_rules! value_types {
-//     ($($name:ident);*) => {
-//         $(
-//             value_type!($name);
-//         )*
-//     }
-// }
-
-// pub trait LanguageType {}
-// pub trait ValueType : LanguageType {}
-
-// value_types!(
-//     i_32;
-//     i_64;
-//     f_32;
-//     f_64);
-// language_types!(
-//     anyfunc;
-//     func;
-//     empty_block);
-
-// macro_rules! language_types {
-//     ($($name:ident);*;$()*) => {
-//         $(
-//             language_type!($name);
-//         )*
-//     }
-// }
-
-// language_types!(
-//     anyfunc;
-//     func;
-//     empty_block;
-//     value_types!(
-//         I32;
-//         I64;
-//         F32;
-//         F64;
-//     );
-// );
-
-
-
 
 #[derive(Debug)]
 #[derive(Clone)]
+#[derive(PartialEq)]
 pub enum ValueType {
     i_32,
     i_64,
@@ -80,10 +14,7 @@ pub enum ValueType {
 #[derive(Debug)]
 #[derive(Clone)]
 pub enum LanguageType {
-    i_32,
-    i_64,
-    f_32,
-    f_64,
+    value(ValueType),
     anyfunc, // no static signature validation check
     func,
     empty_block,

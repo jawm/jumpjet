@@ -1,4 +1,4 @@
-use std::io::{Bytes, Error, Read};
+use std::io::{Bytes, Error, Read, ErrorKind};
 
 const CONTINUE_MASK: u64 = 0x80;
 const VALUE_MASK: u64 = 0x7F;
@@ -13,14 +13,20 @@ pub fn signed<R: Read>(buffer: &mut Bytes<R>) -> Result<i64, Error> {
 pub fn unsigned<R: Read>(buffer: &mut Bytes<R>) -> Result<u64, Error> {
 	let mut result: u64 = 0;
 	let mut shift = 0;
-	for object in buffer {
-		let byte = object.unwrap() as u64;
-		result |= (byte & VALUE_MASK) << shift;
-		if byte & CONTINUE_MASK == 0 {
-			break;
-		}
-		shift += 7;
-	}
+    loop {
+        let byte = match buffer.next() {
+            Some(t) => match t {
+                Ok(v) => v as u64,
+                Err(e) => return Err(e)
+            },
+            None => return Err(Error::new(ErrorKind::Other, "Failed reading unsigned"))
+        };
+        result |= (byte & VALUE_MASK) << shift;
+        if byte & CONTINUE_MASK == 0 {
+            break;
+        }
+        shift += 7;
+    }
 	Ok(result)
 }
 

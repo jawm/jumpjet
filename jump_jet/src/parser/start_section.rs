@@ -10,6 +10,7 @@ use tree::section::Section;
 use tree::exports::ExportSection;
 use tree::exports::ExportEntry;
 
+// TODO needs implemented
 pub fn parse(reader: &mut Read, sections: &Module) -> Result<Box<Section>, ParseError> {
     let count = unsigned(&mut reader.bytes())?;
     let mut entries = vec![];

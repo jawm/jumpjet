@@ -5,12 +5,13 @@ use parser::leb::unsigned;
 use parser::leb::signed;
 use parser::ParseError;
 
+use tree::Module;
 use tree::section::Section;
 use tree::data::DataSection;
 use tree::data::DataSegment;
 
 // TODO finish implementing.
-pub fn parse(reader: &mut Read, sections: &HashMap<u64, Box<Section>>) -> Result<Box<Section>, ParseError> {
+pub fn parse(reader: &mut Read, sections: &Module) -> Result<Box<Section>, ParseError> {
     println!("Got this far?!");
     let count = unsigned(&mut reader.bytes())?;
     let mut entries = vec![];

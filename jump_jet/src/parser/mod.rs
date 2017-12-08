@@ -27,6 +27,7 @@ mod tables_section;
 mod memory_section;
 mod globals_section;
 mod exports_section;
+mod start_section;
 mod elements_section;
 mod code_section;
 mod data_section;
@@ -55,6 +56,10 @@ impl From<io::Error> for ParseError {
     }
 }
 
+pub trait Parse {
+    fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError>;
+}
+
 pub struct ModuleParser {
     sections: HashMap<
         u64,
@@ -74,10 +79,12 @@ impl ModuleParser {
         sections.insert(3,  Box::new(functions_section::parse));
         sections.insert(4,  Box::new(tables_section::parse));
         sections.insert(5,  Box::new(memory_section::parse));
-        // sections.insert(7,  Box::new(exports_section::parse));
-        // sections.insert(9,  Box::new(elements_section::parse));
-        // sections.insert(10, Box::new(code_section::parse));
-        // sections.insert(11, Box::new(data_section::parse));
+        sections.insert(6,  Box::new(globals_section::parse));
+        sections.insert(7,  Box::new(exports_section::parse));
+        sections.insert(8,  Box::new(start_section::parse));
+        sections.insert(9,  Box::new(elements_section::parse));
+        sections.insert(10, Box::new(code_section::parse));
+        sections.insert(11, Box::new(data_section::parse));
 
         ModuleParser {
             sections: sections
@@ -93,7 +100,7 @@ impl ModuleParser {
         if version != 1 {
             return Err(ParseError::UnsupportedModuleVersion)
         } else {
-            let mut sections = HashMap::new();
+            let sections = HashMap::new();
             let mut module = Module {sections: sections, version: version};
             self.parse_sections(&mut module, &mut reader)?;
             println!("it's a thinkg {:?} ", module.get_section::<TypeSection>(1).is_some());
@@ -119,6 +126,7 @@ impl ModuleParser {
             println!("Section parsed {}", id);
             module.sections.insert(id, section);
         }
+        println!("Module parsing complete");
         Ok(module)
 
     }
