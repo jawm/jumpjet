@@ -11,3 +11,5 @@ pub fn read_string(reader: &mut Read) -> Result<String,ParseError> {
     	Err(e) => Err(ParseError::Io(e))
     }
 }
+
+pub fn read_vu1(reader: &mut Read)
