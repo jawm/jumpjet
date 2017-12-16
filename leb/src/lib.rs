@@ -1,52 +1,99 @@
-use std::io::{Bytes, Error, Read, ErrorKind};
+use std::io::{Bytes, Cursor, Error, Read, ErrorKind};
 
 const CONTINUE_MASK: u64 = 0x80;
 const VALUE_MASK: u64 = 0x7F;
 
-/*
-A LEB128 variable-length integer, limited to N bits (i.e., the values [0, 2^N-1]), represented by at most ceil(N/7) bytes that may contain padding 0x80 bytes.
+pub trait ReadLEB : Iterator {
+    fn read_varuint<R: Read>(&mut self, mut max_bits: i8, buffer: &mut Bytes<R>) -> Result<u64, Error> {
+        let mut result: u64 = 0;
+        let mut shift = 0;
+        while max_bits > 0 {
+            let next = buffer.next().unwrap().unwrap() as u64;
+            result |= (next & VALUE_MASK) << shift;
+            if next & CONTINUE_MASK == 0 {
+                if max_bits < 8 {
+                    if next & (0xff << max_bits) != 0 {
+                        return Err(Error::new(ErrorKind::Other,"Wrong value pal"));
+                    }
+                }
+                return Ok(result)
+            }
+            shift += 7;
+            max_bits -= 7;
+        }
+        println!("num too big {:?}, {:?}", max_bits, shift);
+        Err(Error::new(ErrorKind::Other, "Num too big"))
+    }
 
-A max of N bits for the int?
-
-
-*/
-
-#[derive(Debug)]
-struct vs7(i8);
-
-#[derive(Debug)]
-struct vs32(i32);
-
-#[derive(Debug)]
-struct vs64(i64);
-
-#[derive(Debug)]
-struct vu1(u8);
-impl vu1 {
-    pub fn parse() -> Result<vu1> {
-        
+    fn read_varint<R: Read>(&mut self, max_bits: i8, buffer: &mut Bytes<R>) -> Result<i64, Error> {
+        match self.read_varuint(max_bits, buffer) {
+            Ok(val) => Ok(val as i64),
+            Err(e) => Err(e)
+        }
     }
 }
 
-#[derive(Debug)]
-struct vu7(u8);
+pub fn read<R: Read>(mut max_bits: i8, buffer: &mut Bytes<R>) -> Result<u64, Error> {
+    let mut result: u64 = 0;
+    let mut shift = 0;
+    while max_bits > 0 {
+        let next = buffer.next().unwrap().unwrap() as u64;
+        result |= (next & VALUE_MASK) << shift;
+        if next & CONTINUE_MASK == 0 {
+            if max_bits < 8 {
+                if next & (0xff << max_bits) != 0 {
+                    return Err(Error::new(ErrorKind::Other,"Wrong value pal"));
+                }
+            }
+            return Ok(result)
+        }
+        shift += 7;
+        max_bits -= 7;
+    }
+    println!("num too big {:?}, {:?}", max_bits, shift);
+    Err(Error::new(ErrorKind::Other, "Num too big"))
+}
 
-#[derive(Debug)]
-struct vu32(u32);
+impl<R: Read> ReadLEB for Bytes<R> {
+    fn read_varuint<S: Read>(&mut self, mut max_bits: i8, buffer: &mut Bytes<S>) -> Result<u64, Error> {
+        let mut result: u64 = 0;
+        let mut shift = 0;
+        while max_bits > 0 {
+            let next = self.next().unwrap().unwrap() as u64;
+            result |= (next & VALUE_MASK) << shift;
+            if next & CONTINUE_MASK == 0 {
+                if max_bits < 8 {
+                    if next & (0xff << max_bits) != 0 {
+                        return Err(Error::new(ErrorKind::Other,"Wrong value pal"));
+                    }
+                }
+                return Ok(result)
+            }
+            shift += 7;
+            max_bits -= 7;
+        }
+        println!("num too big {:?}, {:?}", max_bits, shift);
+        Err(Error::new(ErrorKind::Other, "Num too big"))
+    }
 
-#[derive(Debug)]
-struct vu64(u64);
+    fn read_varint<S: Read>(&mut self, max_bits: i8, buffer: &mut Bytes<S>) -> Result<i64, Error> {
+        match self.read_varuint(max_bits, buffer) {
+            Ok(val) => Ok(val as i64),
+            Err(e) => Err(e)
+        }
+    }
+}
 
 pub fn signed<R: Read>(buffer: &mut Bytes<R>) -> Result<i64, Error> {
-	match unsigned(buffer) {
-		Ok(val) => Ok(val as i64),
-		Err(e) => Err(e)
-	}
+    match unsigned(buffer) {
+        Ok(val) => Ok(val as i64),
+        Err(e) => Err(e)
+    }
 }
 
 pub fn unsigned<R: Read>(buffer: &mut Bytes<R>) -> Result<u64, Error> {
-	let mut result: u64 = 0;
-	let mut shift = 0;
+    let mut result: u64 = 0;
+    let mut shift = 0;
     loop {
         let byte = match buffer.next() {
             Some(t) => match t {
@@ -61,7 +108,7 @@ pub fn unsigned<R: Read>(buffer: &mut Bytes<R>) -> Result<u64, Error> {
         }
         shift += 7;
     }
-	Ok(result)
+    Ok(result)
 }
 
 #[derive(Debug)]
@@ -103,64 +150,67 @@ impl VarUInt {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-	use std::io::{Bytes, Cursor, Error, Read};
+    use super::*;
+    use std::io::{Bytes, Cursor, Read};
 
-    fn test_varuint(max: i8, to_read: Vec<u8>) -> Result<VarUInt,Error> {
-        let mut c = Cursor::new(to_read);
-        VarUInt::parse(max, &mut c)
+    fn b(bytes: &[u8]) -> Bytes<Cursor<Vec<u8>>> {
+        Cursor::new(bytes.to_vec()).bytes()
     }
 
     #[test]
-    fn test_varuint_does_read() {
-        assert!(test_varuint(1,  vec![0]).unwrap().0 == 0);
-        assert!(test_varuint(1,  vec![1]).unwrap().0 == 1);
-        assert!(test_varuint(7,  vec![1]).unwrap().0 == 1);
-        assert!(test_varuint(7,  vec![7]).unwrap().0 == 7);
-        assert!(test_varuint(7,  vec![127]).unwrap().0 == 127);
-        assert!(test_varuint(31, vec![]))
+    fn test_unsigned_decode() {
+        assert!(read(1, &mut b(&[0])).unwrap() == 0);
+        assert!(b(&[0]).read_varuint(1).unwrap() == 0);
+
+        assert!(read(1, &mut b(&[1])).unwrap() == 1);
+        assert!(read(7, &mut b(&[42])).unwrap() == 42);
+        assert!(read(7, &mut b(&[127])).unwrap() == 127);
+        assert!(read(32, &mut b(&[128, 1])).unwrap() == 128);
+        assert!(read(32, &mut b(&[255, 1])).unwrap() == 255);
+
+        assert!(read(32, &mut b(&[0])).unwrap() == 0);
+        assert!(read(32, &mut b(&[42])).unwrap() == 42);
+        assert!(read(32, &mut b(&[127])).unwrap() == 127);
+        assert!(read(32, &mut b(&[128, 1])).unwrap() == 128);
+        assert!(read(32, &mut b(&[255, 255, 3])).unwrap() == 0xffff);
+        assert!(read(32, &mut b(&[0xE5, 0x8E, 0x26])).unwrap() == 624485);
+        assert!(read(32, &mut b(&[255, 255, 255, 255, 0b1111])).unwrap() == 0xffff_ffff);
+        assert!(read(64, &mut b(&[255, 255, 255, 255, 255, 255, 255, 255, 255, 1])).unwrap() == 0xffff_ffff_ffff_ffff);
     }
 
     #[test]
-    fn test_varuint_doesnt_read() {
-        assert!(test_varuint(1, vec![7]).is_err());
-    }
-
-
-	fn x(bytes: Vec<u8>) -> Bytes<Cursor<Vec<u8>>> {
-		Cursor::new(bytes).bytes()
-	}
-
-    #[test]
-    fn unsigned_reads_1_32() {
-    	let mut buff = x(vec![1]);
-    	assert!(unsigned(&mut buff).unwrap() == 1);
+    #[should_panic]
+    fn test_decode_overflow_u1() {
+        read(1, &mut b(&[2])).unwrap();
     }
 
     #[test]
-    fn unsigned_reads_2_32() {
-    	let mut buff = x(vec![2]);
-    	assert!(unsigned(&mut buff).unwrap() == 2);
+    #[should_panic]
+    fn test_decode_overflow_u7() {
+        read(7, &mut b(&[128])).unwrap();
     }
 
     #[test]
-    fn unsigned_reads_500_32() {
-    	let mut buff = x(vec![
-    		0b1111_0100u8,
-    		0b0000_0011u8,
-    	]); // expect 304
-    	assert!(unsigned(&mut buff).unwrap() == 500);
+    #[should_panic]
+    fn test_decode_overflow_u8() {
+        read(8, &mut b(&[128, 2])).unwrap();
     }
 
     #[test]
-    fn signed_reads_1() {
-    	let mut buff = x(vec![1]);
-    	assert!(signed(&mut buff).unwrap() == 1);
+    #[should_panic]
+    fn test_decode_overflow_u16() {
+        read(16, &mut b(&[128, 128, 4])).unwrap();
     }
 
     #[test]
-    fn signed_not_reads_2() {
-    	let mut buff = x(vec![1]);
-    	assert!(signed(&mut buff).unwrap() != 2);	
+    #[should_panic]
+    fn test_decode_overflow_u32() {
+        read(32, &mut b(&[128, 128, 128, 128, 16])).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_decode_overflow_u64() {
+        read(16, &mut b(&[128, 128, 128, 128, 128, 128, 128, 128, 128, 2])).unwrap();
     }
 }
