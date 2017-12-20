@@ -3,58 +3,7 @@ use std::io::{Bytes, Error, Read, ErrorKind};
 const CONTINUE_MASK: u64 = 0x80;
 const VALUE_MASK: u64 = 0x7F;
 
-pub trait ReadLEB : Iterator {
-    fn read_varuint(&mut self, max_bits: i8) -> Result<u64, Error>;
-
-    fn read_varint(&mut self, max_bits: i8) -> Result<i64, Error>;
-}
-
-impl<R: Read> ReadLEB for Bytes<R> {
-        fn read_varuint(&mut self, mut max_bits: i8) -> Result<u64, Error> {
-            let mut result: u64 = 0;
-            let mut shift = 0;
-            while max_bits > 0 {
-                let next = self.next().unwrap().unwrap() as u64;
-                result |= (next & VALUE_MASK) << shift;
-                if next & CONTINUE_MASK == 0 {
-                    if max_bits < 8 {
-                        if next & (0xff << max_bits) != 0 {
-                            return Err(Error::new(ErrorKind::Other,"Wrong value pal"));
-                        }
-                    }
-                    return Ok(result)
-                }
-                shift += 7;
-                max_bits -= 7;
-            }
-            Err(Error::new(ErrorKind::Other, "Num too big"))
-        }
-
-        fn read_varint(&mut self, mut max_bits: i8) -> Result<i64, Error> {
-            let mut result: u64 = 0;
-            let mut shift = 0;
-            while max_bits > 0 {
-                let next = self.next().unwrap().unwrap() as u64;
-                result |= (next & VALUE_MASK) << shift;
-                if next & CONTINUE_MASK == 0 {
-                    if max_bits < 8 {
-                        if next & (0xff << max_bits) != 0 {
-                            return Err(Error::new(ErrorKind::Other,"Wrong value pal"));
-                        }
-                    }
-                    if next & 0x40 != 0 {
-                        result |= (!0) << (shift+7);
-                    }
-                    return Ok(result as i64);
-                }
-                shift += 7;
-                max_bits -= 7;
-            }
-            Err(Error::new(ErrorKind::Other, "Num too big"))
-        }
-}
-
-pub fn read<R: Read>(mut max_bits: i8, buffer: &mut Bytes<R>) -> Result<u64, Error> {
+fn read_values<R: Read>(buffer: &mut Bytes<R>, mut max_bits: i8) -> Result<(u64,u64,u64),Error> {
     let mut result: u64 = 0;
     let mut shift = 0;
     while max_bits > 0 {
@@ -66,7 +15,7 @@ pub fn read<R: Read>(mut max_bits: i8, buffer: &mut Bytes<R>) -> Result<u64, Err
                     return Err(Error::new(ErrorKind::Other,"Wrong value pal"));
                 }
             }
-            return Ok(result)
+            return Ok((result,next,shift));
         }
         shift += 7;
         max_bits -= 7;
@@ -74,35 +23,32 @@ pub fn read<R: Read>(mut max_bits: i8, buffer: &mut Bytes<R>) -> Result<u64, Err
     Err(Error::new(ErrorKind::Other, "Num too big"))
 }
 
+pub trait ReadLEB : Iterator {
+    fn read_varuint(&mut self, max_bits: i8) -> Result<u64, Error>;
 
-
-pub fn signed<R: Read>(buffer: &mut Bytes<R>) -> Result<i64, Error> {
-    match unsigned(buffer) {
-        Ok(val) => Ok(val as i64),
-        Err(e) => Err(e)
-    }
+    fn read_varint(&mut self, max_bits: i8) -> Result<i64, Error>;
 }
 
-pub fn unsigned<R: Read>(buffer: &mut Bytes<R>) -> Result<u64, Error> {
-    let mut result: u64 = 0;
-    let mut shift = 0;
-    loop {
-        let byte = match buffer.next() {
-            Some(t) => match t {
-                Ok(v) => v as u64,
-                Err(e) => return Err(e)
-            },
-            None => return Err(Error::new(ErrorKind::Other, "Failed reading unsigned"))
-        };
-        result |= (byte & VALUE_MASK) << shift;
-        if byte & CONTINUE_MASK == 0 {
-            break;
+impl<R: Read> ReadLEB for Bytes<R> {
+    fn read_varuint(&mut self, max_bits: i8) -> Result<u64, Error> {
+        match read_values(self, max_bits) {
+            Ok((result,_,_)) => Ok(result),
+            Err(e) => Err(e)
         }
-        shift += 7;
     }
-    Ok(result)
-}
 
+    fn read_varint(&mut self, max_bits: i8) -> Result<i64, Error> {
+        match read_values(self, max_bits) {
+            Ok((mut result,next,shift)) => {
+                if next & 0x40 != 0 {
+                    result |= !0 << (shift+7);
+                }
+                Ok(result as i64)
+            },
+            Err(e) => Err(e)
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

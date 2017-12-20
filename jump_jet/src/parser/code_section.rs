@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io::Read;
 
-use parser::leb::unsigned;
+use parser::leb::ReadLEB;
 use parser::ParseError;
 
 use tree::Module;
@@ -12,14 +12,14 @@ use tree::language_types::ValueType;
 
 // TODO finish implementing.
 pub fn parse(mut reader: &mut Read, sections: &Module) -> Result<Box<Section>, ParseError> {
-    let count = unsigned(&mut reader.bytes())?;
+    let count = reader.bytes().read_varuint(32).unwrap();
     let mut entries = vec![];
     for entry in 0..count {
-        let body_size = unsigned(&mut reader.bytes())?;
-        let local_count = unsigned(&mut reader.bytes())?;
+        let body_size = reader.bytes().read_varuint(32).unwrap();
+        let local_count = reader.bytes().read_varuint(32).unwrap();
         let mut locals = vec![];
         for i in 0..local_count {
-            let local_quantity = unsigned(&mut reader.bytes())?;
+            let local_quantity = reader.bytes().read_varuint(32).unwrap();
             let local_type = ValueType::parse(&mut reader)?;
             locals.push(local_type);
         }

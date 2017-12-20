@@ -2,7 +2,7 @@ extern crate byteorder;
 extern crate leb;
 use self::byteorder::ReadBytesExt;
 use self::byteorder::LittleEndian;
-use self::leb::unsigned;
+use self::leb::ReadLEB;
 
 use std::io;
 use std::io::Read;
@@ -111,7 +111,7 @@ impl ModuleParser {
     fn parse_sections<'a, T: Read>(&self, module: &'a mut Module, reader: &mut T) -> Result<&'a mut Module, ParseError> {
 
         loop {
-            let id = match unsigned(&mut reader.bytes()) {
+            let id = match reader.bytes().read_varuint(7) {
                 Ok(id) => id,
                 Err(_) => break
             };
@@ -136,7 +136,7 @@ impl ModuleParser {
             Some(func) => func,
             None => return Err(ParseError::UnknownSectionId(id))
         };
-        let length = unsigned(&mut reader.bytes())?;
+        let length = reader.bytes().read_varuint(32).unwrap();
         let mut subreader = reader.take(length);
         parser_function(&mut subreader, module)
     }

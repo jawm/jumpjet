@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use parser::leb::unsigned;
+use parser::leb::ReadLEB;
 use parser::ParseError;
 use parser::utils::read_string;
 
@@ -12,7 +12,7 @@ use tree::imports::ImportSection;
 
 
 pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError> {
-    let count = unsigned(&mut reader.bytes())?;
+    let count = reader.bytes().read_varuint(32).unwrap();
     let mut entries = vec![];
     for entry in 0..count {
         let module_name = read_string(reader);

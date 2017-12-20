@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use parser::leb::unsigned;
+use parser::leb::ReadLEB;
 use parser::Parse;
 use parser::ParseError;
 
@@ -11,21 +11,20 @@ use tree::language_types::ValueType;
 use tree::types::TypeEntry;
 use tree::types::TypeSection;
 
-
 pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError> {
-    let count = unsigned(&mut reader.bytes())?;
+    let count = reader.bytes().read_varuint(32).unwrap();
     let mut entries: Vec<TypeEntry> = vec![];
     for entry in 0..count {
         let form = LanguageType::parse(reader)?;
         if form != LanguageType::func {
             return Err(ParseError::InvalidTypeForm)
         }
-        let param_count = unsigned(&mut reader.bytes())?;
+        let param_count = reader.bytes().read_varuint(32).unwrap();
         let mut params: Vec<ValueType> = vec![];
         for param_index in 0..param_count {
             params.push(ValueType::parse(reader)?);
         }
-        let return_count =  unsigned(&mut reader.bytes())?;
+        let return_count =  reader.bytes().read_varuint(1).unwrap();
         let mut returns: Vec<ValueType> = vec![];
         if return_count > 1 {
             return Err(ParseError::TooManyReturns);

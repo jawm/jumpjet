@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use parser::leb::unsigned;
+use parser::leb::ReadLEB;
 use parser::ParseError;
 
 use tree::Module;
@@ -10,14 +10,14 @@ use tree::functions::FunctionSection;
 
 
 pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError> {
-    let count = unsigned(&mut reader.bytes())?;
+    let count = reader.bytes().read_varuint(32).unwrap();
     let mut entries = vec![];
     for entry in 0..count {
         let mut x = reader.bytes();
-        let index = unsigned(&mut x)?;
+        let index = x.read_varuint(32).unwrap();
         match module.get_section::<TypeSection>(1) {
             Some(section) => {
-                let signature = &section.types[0 as usize];
+                let signature = &section.types[index as usize];
                 entries.push(signature.clone());
             },
             None => {

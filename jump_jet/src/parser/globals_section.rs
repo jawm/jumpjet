@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io::Read;
 
-use parser::leb::unsigned;
+use parser::leb::ReadLEB;
 use parser::ParseError;
 
 use tree::language_types::GlobalType;
@@ -11,7 +11,7 @@ use tree::globals::GlobalEntry;
 use tree::globals::GlobalSection;
 
 pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError> {
-    let count = unsigned(&mut reader.bytes())?;
+    let count = reader.bytes().read_varuint(32).unwrap();
     let mut entries = vec![];
     for entry in 0..count {
         let data_type = GlobalType::parse(reader)?;
