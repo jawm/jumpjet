@@ -1,7 +1,13 @@
-use std::io::{Bytes, Error, Read, ErrorKind};
+use std::io::{
+    Bytes,
+    Error,
+    Read,
+    ErrorKind
+};
 
 const CONTINUE_MASK: u64 = 0x80;
 const VALUE_MASK: u64 = 0x7F;
+const SIGN_MASK: u64 = 0x40;
 
 fn read_values<R: Read>(buffer: &mut Bytes<R>, mut max_bits: i8) -> Result<(u64,u64,u64),Error> {
     let mut result: u64 = 0;
@@ -40,7 +46,7 @@ impl<R: Read> ReadLEB for Bytes<R> {
     fn read_varint(&mut self, max_bits: i8) -> Result<i64, Error> {
         match read_values(self, max_bits) {
             Ok((mut result,next,shift)) => {
-                if next & 0x40 != 0 {
+                if next & SIGN_MASK != 0 {
                     result |= !0 << (shift+7);
                 }
                 Ok(result as i64)
