@@ -1,5 +1,3 @@
-use mopa::Any;
-
 use std::collections::HashMap;
 
 pub mod section;

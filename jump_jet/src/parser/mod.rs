@@ -10,11 +10,7 @@ use std::collections::HashMap;
 
 use super::tree::Module;
 use super::tree::section::Section;
-use super::tree::language_types::ValueType;
-use super::tree::language_types::LanguageType;
 use super::tree::types::*;
-
-use tree::imports::ImportSection;
 
 mod utils;
 

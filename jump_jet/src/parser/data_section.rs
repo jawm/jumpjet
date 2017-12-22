@@ -1,35 +1,32 @@
-use std::collections::HashMap;
 use std::io::Read;
 
 use parser::leb::ReadLEB;
 use parser::ParseError;
+use parser::utils;
 
-use tree::Module;
-use tree::section::Section;
 use tree::data::DataSection;
 use tree::data::DataSegment;
+use tree::Module;
+use tree::section::Section;
 
 // TODO finish implementing.
-pub fn parse(reader: &mut Read, sections: &Module) -> Result<Box<Section>, ParseError> {
-    println!("Got this far?!");
+pub fn parse(reader: &mut Read, _module: &Module) -> Result<Box<Section>, ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();
     let mut entries = vec![];
-    println!("count: {}", count);
-    for entry in 0..count {
-        println!("iteration");
+    for _ in 0..count {
         let index = reader.bytes().read_varuint(32).unwrap();
-        let offset = 0; // TODO FIGURE OUT PARSING OF EXPRESSIONS - SHOULD BE I32 INITIALISER
+        if index != 0 {
+            return Err(ParseError::CustomError("Data index must be 0 in wasm 1.0".to_string()));
+        }
+        let offset = utils::swallow_expr(&mut reader.bytes()); // TODO FIGURE OUT PARSING OF EXPRESSIONS - SHOULD BE I32 INITIALISER
         let size = reader.bytes().read_varuint(32).unwrap();
         let mut data = vec![];
         reader.take(size).read_to_end(&mut data);
         entries.push(DataSegment {
-            index: index,
-            offset: offset,
-            data: data
+            index,
+            offset,
+            data
         });
     }
-    println!("returning");
-    Ok(Box::new(DataSection{
-        entries: entries
-    }))
+    Ok(Box::new(DataSection{entries}))
 }

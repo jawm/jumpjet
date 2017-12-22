@@ -1,4 +1,5 @@
 use tree::section::Section;
+use tree::types::TypeEntry;
 
 #[derive(Debug)]
 pub struct ElementSection {
@@ -9,7 +10,7 @@ pub struct ElementSection {
 pub struct ElementSegment {
     pub index: u64,
     pub offset: i64, // TODO needs to be init_expr
-    pub elements: Vec<u64>,
+    pub elements: Vec<TypeEntry>,
 }
 
 impl Section for ElementSection {}

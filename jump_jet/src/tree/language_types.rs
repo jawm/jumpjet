@@ -1,4 +1,4 @@
-use std::clone::Clone;
+use tree::types::TypeEntry;
 
 #[derive(Debug)]
 #[derive(Clone)]
@@ -22,15 +22,15 @@ pub enum LanguageType {
 
 #[derive(Debug)]
 pub enum ExternalKind {
-    function(u64), // possibly have it go into the types section, instead of storing index
-    table(u64),
-    memory(u64),
-    global(u64),
+    function(TypeEntry), // possibly have it go into the types section, instead of storing index
+    table(TableType),
+    memory(MemoryType),
+    global(GlobalType),
 }
 
 #[derive(Debug)]
 pub struct TableType {
-    pub elemType: i64,
+    pub elem_type: LanguageType,
     pub limits: ResizableLimits,
 }
 
@@ -38,6 +38,13 @@ pub struct TableType {
 pub struct ResizableLimits {
     pub initial: u64,
     pub maximum: Option<u64>,
+}
+
+// Pretty much just including this to have a nicer name, and if we ever add stuff to MemoryType
+// I guess
+#[derive(Debug)]
+pub struct MemoryType {
+    pub limits: ResizableLimits
 }
 
 #[derive(Debug)]

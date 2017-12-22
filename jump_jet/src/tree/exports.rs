@@ -9,7 +9,7 @@ pub struct ExportSection {
 #[derive(Debug)]
 pub struct ExportEntry {
     pub field: String,
-    pub kind: ExternalKind,
+    pub kind: ExternalKind
 }
 
 impl Section for ExportSection {}

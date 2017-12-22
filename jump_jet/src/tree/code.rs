@@ -7,7 +7,7 @@ pub struct CodeSection {
 }
 #[derive(Debug)]
 pub struct FunctionBody {
-    pub locals: Vec<ValueType>,
+    pub locals: Vec<(u64, ValueType)>,
     pub code: Vec<Operation>,
 }
 

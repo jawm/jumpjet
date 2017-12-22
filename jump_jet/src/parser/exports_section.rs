@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use std::io::Read;
 
 use parser::leb::ReadLEB;
 use parser::ParseError;
+use parser::utils;
 
 use tree::language_types::ExternalKind;
 use tree::Module;
@@ -10,22 +10,16 @@ use tree::section::Section;
 use tree::exports::ExportSection;
 use tree::exports::ExportEntry;
 
-pub fn parse(reader: &mut Read, sections: &Module) -> Result<Box<Section>, ParseError> {
+pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();
     let mut entries = vec![];
-    for entry in 0..count {
-        
-        let field_len = reader.bytes().read_varuint(32).unwrap();
-        let mut field = "".to_string();
-        reader.take(field_len).read_to_string(&mut field);
-        
-        let kind = ExternalKind::parse(reader)?;
+    for _ in 0..count {
+        let mut field = utils::read_string(reader)?;
+        let kind = ExternalKind::by_index(reader, module)?;
         entries.push(ExportEntry {
-            field: field,
-            kind: kind
+            field,
+            kind
         });
     }
-    Ok(Box::new(ExportSection{
-        entries: entries
-    }))
+    Ok(Box::new(ExportSection{entries}))
 }

@@ -1,14 +1,14 @@
-use std::collections::HashMap;
 use std::io::Read;
 
+use parser;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
+use tree::globals::GlobalEntry;
+use tree::globals::GlobalSection;
 use tree::language_types::GlobalType;
 use tree::Module;
 use tree::section::Section;
-use tree::globals::GlobalEntry;
-use tree::globals::GlobalSection;
 
 pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();
@@ -16,11 +16,9 @@ pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseEr
     for entry in 0..count {
         let data_type = GlobalType::parse(reader)?;
         entries.push(GlobalEntry{
-            data_type: data_type,
-            initial: 0
+            data_type,
+            initial: parser::utils::swallow_expr(&mut reader.bytes()) // TODO replace this with a `init_expr`
         });
     }
-    Ok(Box::new(GlobalSection {
-        entries: entries
-    }))
+    Ok(Box::new(GlobalSection{entries}))
 }

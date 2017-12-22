@@ -31,7 +31,7 @@ impl Runtime {
         }
     }
 
-    pub fn expose(&mut self, namespace: &str, functions: Vec<fn(Vec<ValueType>)->Vec<ValueType>>) {
+    pub fn expose(&mut self, _namespace: &str, _functions: Vec<fn(Vec<ValueType>)->Vec<ValueType>>) {
         println!("Exposing functions under a namespace");
     }
 
@@ -56,7 +56,7 @@ impl Runtime {
         self.modules.insert(name.to_string(), module);
     }
 
-    pub fn prepare(&mut self, name: &str) {
+    pub fn prepare(&mut self, _name: &str) {
         println!("Preparing module");
 
     }

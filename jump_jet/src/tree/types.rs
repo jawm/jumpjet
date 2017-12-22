@@ -1,6 +1,5 @@
 use tree::section::Section;
 use super::language_types::{LanguageType, ValueType};
-use std::clone::Clone;
 
 #[derive(Debug)]
 pub struct TypeSection {
