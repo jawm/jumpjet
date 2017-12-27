@@ -10,7 +10,7 @@ use tree::language_types::GlobalType;
 use tree::Module;
 use tree::section::Section;
 
-pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError> {
+pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();
     let mut entries = vec![];
     for entry in 0..count {
@@ -20,5 +20,5 @@ pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseEr
             initial: parser::utils::swallow_expr(&mut reader.bytes()) // TODO replace this with a `init_expr`
         });
     }
-    Ok(Box::new(GlobalSection{entries}))
+    Ok(())
 }

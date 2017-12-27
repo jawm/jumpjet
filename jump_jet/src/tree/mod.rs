@@ -14,15 +14,8 @@ pub mod elements;
 pub mod code;
 pub mod data;
 
-pub struct Module {
+pub struct Module<'a> {
     pub version: u32,
-    pub sections: HashMap<u64, Box<section::Section>>,
-    // pub functions: Vec<functions::Function>,
-}
-
-impl Module {
-    pub fn get_section<T: section::Section>(&self, index: u64) -> Option<&T> {
-    	let value: &Box<section::Section> = self.sections.get(&index).unwrap();
-    	value.downcast_ref::<T>()
-    }
+    pub functions: Vec<functions::Function>,
+    pub imports: HashMap<&'a str, HashMap<&'a str, language_types::ExternalKind>>
 }

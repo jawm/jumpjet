@@ -8,7 +8,7 @@ pub struct FunctionSection {
 
 impl Section for FunctionSection {}
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Function {
     pub signature: TypeEntry
 }

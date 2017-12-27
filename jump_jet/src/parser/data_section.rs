@@ -10,7 +10,7 @@ use tree::Module;
 use tree::section::Section;
 
 // TODO finish implementing.
-pub fn parse(reader: &mut Read, _module: &Module) -> Result<Box<Section>, ParseError> {
+pub fn parse(reader: &mut Read, _module: &mut Module) -> Result<(), ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();
     let mut entries = vec![];
     for _ in 0..count {
@@ -28,5 +28,5 @@ pub fn parse(reader: &mut Read, _module: &Module) -> Result<Box<Section>, ParseE
             data
         });
     }
-    Ok(Box::new(DataSection{entries}))
+    Ok(())
 }

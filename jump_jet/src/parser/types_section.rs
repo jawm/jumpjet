@@ -4,6 +4,7 @@ use parser::leb::ReadLEB;
 use parser::Parse;
 use parser::ParseError;
 
+use tree::functions::Function;
 use tree::language_types::LanguageType;
 use tree::language_types::ValueType;
 use tree::Module;
@@ -11,7 +12,7 @@ use tree::section::Section;
 use tree::types::TypeEntry;
 use tree::types::TypeSection;
 
-pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError> {
+pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     let bytes = &mut reader.bytes();
     let count = bytes.read_varuint(32).unwrap();
     let mut types: Vec<TypeEntry> = vec![];
@@ -33,9 +34,9 @@ pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseEr
         } else if return_count == 1 {
             returns.push(ValueType::parse(bytes)?);
         }
-        types.push(TypeEntry{form, params, returns});
+        module.functions.push(Function{signature: TypeEntry{form,params,returns}});
     }
-    Ok(Box::new(TypeSection{types}))
+    Ok(())
 }
 
 

@@ -10,7 +10,7 @@ use tree::section::Section;
 use tree::exports::ExportSection;
 use tree::exports::ExportEntry;
 
-pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError> {
+pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();
     let mut entries = vec![];
     for _ in 0..count {
@@ -21,5 +21,5 @@ pub fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseEr
             kind
         });
     }
-    Ok(Box::new(ExportSection{entries}))
+    Ok(())
 }
