@@ -56,44 +56,46 @@ impl ExternalKind {
 		let external_kind = reader.read_u8()?;
 
 		// TODO this is only valid for external_kind of function.
-		Ok(match external_kind {
-			0 => ExternalKind::function(
-				module.get_section::<FunctionSection>(3).unwrap().functions[
-					reader.bytes().read_varuint(32)? as usize
-				]
-			),
-			1 => ExternalKind::table(TableType::parse(reader)?),
-			2 => ExternalKind::memory(MemoryType::parse(reader)?),
-			3 => ExternalKind::global(GlobalType::parse(reader)?),
-			_ => return Err(ParseError::InvalidExternalKind(external_kind))
-		})
+		// Ok(match external_kind {
+		// 	0 => ExternalKind::function(
+		// 		module.get_section::<FunctionSection>(3).unwrap().functions[
+		// 			reader.bytes().read_varuint(32)? as usize
+		// 		]
+		// 	),
+		// 	1 => ExternalKind::table(TableType::parse(reader)?),
+		// 	2 => ExternalKind::memory(MemoryType::parse(reader)?),
+		// 	3 => ExternalKind::global(GlobalType::parse(reader)?),
+		// 	_ => return Err(ParseError::InvalidExternalKind(external_kind))
+		// })
+		Err(ParseError::CustomError("commented out line 97".to_string()))
 	}
 
 	pub fn by_index(reader: &mut Read, module: &Module) -> Result<ExternalKind, ParseError> {
 		let external_kind = reader.read_u8()?;
-		Ok(match external_kind {
-			0 => ExternalKind::function(
-				module.get_section::<FunctionSection>(3).unwrap().functions[
-					reader.bytes().read_varuint(32)? as usize
-				]
-			),
-			1 => ExternalKind::table(
-				module.get_section::<TableSection>(3).unwrap().entries[
-					reader.bytes().read_varuint(32)? as usize
-				]
-			),
-			2 => ExternalKind::memory(
-				module.get_section::<MemorySection>(3).unwrap().entries[
-					reader.bytes().read_varuint(32)? as usize
-				]
-			),
-			3 => ExternalKind::global(
-				module.get_section::<GlobalSection>(3).unwrap().entries[
-					reader.bytes().read_varuint(32)? as usize
-				].data_type
-			),
-			_ => return Err(ParseError::InvalidExternalKind(external_kind))
-		})
+		// Ok(match external_kind {
+		// 	0 => ExternalKind::function(
+		// 		module.get_section::<FunctionSection>(3).unwrap().functions[
+		// 			reader.bytes().read_varuint(32)? as usize
+		// 		]
+		// 	),
+		// 	1 => ExternalKind::table(
+		// 		module.get_section::<TableSection>(3).unwrap().entries[
+		// 			reader.bytes().read_varuint(32)? as usize
+		// 		]
+		// 	),
+		// 	2 => ExternalKind::memory(
+		// 		module.get_section::<MemorySection>(3).unwrap().entries[
+		// 			reader.bytes().read_varuint(32)? as usize
+		// 		]
+		// 	),
+		// 	3 => ExternalKind::global(
+		// 		module.get_section::<GlobalSection>(3).unwrap().entries[
+		// 			reader.bytes().read_varuint(32)? as usize
+		// 		].data_type
+		// 	),
+		// 	_ => return Err(ParseError::InvalidExternalKind(external_kind))
+		// })
+		Err(ParseError::CustomError("commented out line 97".to_string()))
 	}
 }
 

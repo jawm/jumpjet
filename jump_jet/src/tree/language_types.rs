@@ -28,6 +28,8 @@ pub enum ExternalKind {
     global(GlobalType),
 }
 
+trait LanguageTypeT {}
+
 #[derive(Debug)]
 pub struct TableType {
     pub elem_type: LanguageType,

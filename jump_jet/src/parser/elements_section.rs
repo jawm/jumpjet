@@ -22,10 +22,10 @@ pub fn parse(mut reader: &mut Read, module: &Module) -> Result<Box<Section>, Par
         let num_elem = reader.bytes().read_varuint(32).unwrap();
         let mut elements = vec![];
         for _ in 0..num_elem {
-            elements.push(
-                module.get_section::<TypeSection>(1).unwrap().types
-                    .get(reader.bytes().read_varuint(32).unwrap() as usize).unwrap()
-            );
+            // elements.push(
+            //     module.get_section::<TypeSection>(1).unwrap().types
+            //         .get(reader.bytes().read_varuint(32).unwrap() as usize).unwrap()
+            // );
         }
         entries.push(ElementSegment{
             index,

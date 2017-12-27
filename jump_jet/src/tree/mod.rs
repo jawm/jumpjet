@@ -15,8 +15,9 @@ pub mod code;
 pub mod data;
 
 pub struct Module {
-    pub sections: HashMap<u64, Box<section::Section>>,
     pub version: u32,
+    pub sections: HashMap<u64, Box<section::Section>>,
+    // pub functions: Vec<functions::Function>,
 }
 
 impl Module {

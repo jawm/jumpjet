@@ -7,3 +7,8 @@ pub struct FunctionSection {
 }
 
 impl Section for FunctionSection {}
+
+#[derive(Debug)]
+pub struct Function {
+    pub signature: TypeEntry
+}
