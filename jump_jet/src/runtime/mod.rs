@@ -10,7 +10,7 @@ use std::path::Path;
 
 use parser::ModuleParser;
 
-pub struct Runtime<'a> {
+pub struct Runtime {
     exposed: HashMap<
         String, 
         HashMap<
@@ -18,12 +18,12 @@ pub struct Runtime<'a> {
             fn(Vec<ValueType>) -> Vec<ValueType>
         >
     >,
-    modules: HashMap<String, Module<'a>>,
+    modules: HashMap<String, Module>,
     parser: ModuleParser
 }
 
-impl<'a> Runtime<'a> {
-    pub fn new() -> Runtime<'a> {
+impl Runtime {
+    pub fn new() -> Runtime {
         Runtime {
             exposed: HashMap::new(),
             modules: HashMap::new(),
@@ -48,7 +48,7 @@ impl<'a> Runtime<'a> {
         file.read_to_end(&mut buffer).unwrap();
         let mut reader = Cursor::new(&buffer[..]);
 
-        let module: Module<'a> = match self.parser.parse_module(&mut reader) {
+        let module: Module = match self.parser.parse_module(&mut reader) {
             Ok(module) => module,
             Err(err) => panic!("Failed to parse module: {:?}", err)
         };
@@ -66,7 +66,7 @@ impl<'a> Runtime<'a> {
     }
 }
 
-impl<'a> Module<'a> {
+impl Module {
     pub fn run(&self) {
         println!("running the module yo");
     }

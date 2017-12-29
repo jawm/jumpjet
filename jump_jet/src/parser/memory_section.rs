@@ -4,15 +4,20 @@ use parser::leb::ReadLEB;
 use parser::ParseError;
 
 use tree::language_types::MemoryType;
-use tree::memory::MemorySection;
+use tree::language_types::ResizableLimits;
+use tree::memory::Memory;
 use tree::Module;
 use tree::section::Section;
 
 pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();
-    let mut entries = vec![];
-    for entry in 0..count {
-        entries.push(MemoryType::parse(reader)?);
+    for _ in 0..count {
+        let limits = ResizableLimits::parse(reader)?;
+        let capacity = limits.maximum.unwrap_or(limits.initial) as usize;
+        module.memories.push(Memory{
+            limits,
+            values: Vec::with_capacity(capacity)
+        });
     }
     Ok(())
 }

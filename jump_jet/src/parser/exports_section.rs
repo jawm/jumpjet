@@ -12,14 +12,10 @@ use tree::exports::ExportEntry;
 
 pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();
-    let mut entries = vec![];
     for _ in 0..count {
         let mut field = utils::read_string(reader)?;
         let kind = ExternalKind::by_index(reader, module)?;
-        entries.push(ExportEntry {
-            field,
-            kind
-        });
+        module.exports.insert(field, kind);
     }
     Ok(())
 }

@@ -65,6 +65,8 @@ pub struct ModuleParser {
     >
 }
 
+use std::io::ErrorKind;
+
 impl ModuleParser {
 
     pub fn default() -> ModuleParser {
@@ -85,7 +87,7 @@ impl ModuleParser {
         ModuleParser{sections}
     }
 
-    pub fn parse_module<'a, T: Read>(&self, mut reader: T) -> Result<Module<'a>,ParseError> {
+    pub fn parse_module<T: Read>(&self, mut reader: T) -> Result<Module,ParseError> {
         let magic_number = reader.read_u32::<LittleEndian>()?;
         if magic_number != MAGIC_NUMBER {
             return Err(ParseError::WrongMagicNumber)
@@ -96,10 +98,17 @@ impl ModuleParser {
         } else {
             let mut module = Module {
                 version,
-                functions: vec![],
+                types: vec![],
                 imports: HashMap::new(),
+                functions: vec![],
+                tables: vec![],
+                memories: vec![],
+                globals: vec![],
+                exports: HashMap::new(),
+                start_function: None,
             };
             self.parse_sections(&mut module, &mut reader)?;
+            println!("parsed module {:#?}", module);
             return Ok(module)
         }
     }
@@ -107,9 +116,15 @@ impl ModuleParser {
     fn parse_sections<T: Read>(&self, module: &mut Module, reader: &mut T) -> Result<(), ParseError> {
 
         loop {
+
             let id = match reader.bytes().read_varuint(7) {
                 Ok(id) => id,
-                Err(_) => break
+                Err(e) => {
+                    if e.kind() == ErrorKind::UnexpectedEof {
+                        break;
+                    }
+                    panic!("{:?}", e);
+                }
             };
             println!("parsing section {}", id);
             let section = match self.parse_section(id, reader, module) {
@@ -120,7 +135,6 @@ impl ModuleParser {
                 }
             };
             println!("Section parsed {}", id);
-            //module.sections.insert(id, section);
         }
         println!("Module parsing complete");
         Ok(())

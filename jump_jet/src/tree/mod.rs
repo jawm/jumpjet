@@ -14,8 +14,16 @@ pub mod elements;
 pub mod code;
 pub mod data;
 
-pub struct Module<'a> {
+#[derive(Debug)]
+pub struct Module {
     pub version: u32,
+    pub types: Vec<types::TypeDefinition>,
+    pub imports: HashMap<String, HashMap<String, language_types::ExternalKind>>,
     pub functions: Vec<functions::Function>,
-    pub imports: HashMap<&'a str, HashMap<&'a str, language_types::ExternalKind>>
+    pub tables: Vec<tables::Table>,
+    pub memories: Vec<memory::Memory>,
+    pub globals: Vec<globals::Global>,
+    pub exports: HashMap<String, language_types::ExternalKind>,
+    pub start_function: Option<functions::Function>,
+    // code
 }

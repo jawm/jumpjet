@@ -22,10 +22,10 @@ pub enum LanguageType {
 
 #[derive(Debug)]
 pub enum ExternalKind {
-    function(TypeEntry), // possibly have it go into the types section, instead of storing index
-    table(TableType),
-    memory(MemoryType),
-    global(GlobalType),
+    function(usize), // possibly have it go into the types section, instead of storing index
+    table(usize),
+    memory(usize),
+    global(usize),
 }
 
 #[derive(Debug)]

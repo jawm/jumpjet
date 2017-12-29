@@ -3,27 +3,22 @@ use std::io::Read;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
-use tree::functions::FunctionSection;
+use tree::functions::Function;
+use tree::functions::FuncSignature;
 use tree::Module;
-use tree::section::Section;
-use tree::types::TypeSection;
-
+use tree::types::TypeDefinition;
 
 pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     let mut bytes = reader.bytes();
     let count = bytes.read_varuint(32).unwrap();
-    // let mut functions = vec![];
-    for entry in 0..count {
+
+    for _ in 0..count {
         let index = bytes.read_varuint(32).unwrap();
-        // match module.get_section::<TypeSection>(1) {
-        //     Some(section) => {
-        //         let signature = &section.types[index as usize];
-        //         functions.push(signature.clone());
-        //     },
-        //     None => {
-        //         return Err(ParseError::NonExistantTypeReference);
-        //     }
-        // }
+        if let Some(&TypeDefinition::func(ref signature)) = module.types.get(index as usize) {
+            module.functions.push(Function {signature: signature.clone()});
+        } else {
+            return Err(ParseError::CustomError("The type doesn't exist or isn't a function signature".to_string()));
+        }
     }
     Ok(())
 }

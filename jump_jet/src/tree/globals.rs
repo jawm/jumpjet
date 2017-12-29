@@ -11,3 +11,9 @@ pub struct GlobalEntry {
 	pub data_type: GlobalType,
 	pub initial: i64// TODO figure out init_expr
 }
+
+#[derive(Debug)]
+pub struct Global {
+    pub constraints: GlobalType,
+    pub value: i64 // TODO should be an init_expr
+}

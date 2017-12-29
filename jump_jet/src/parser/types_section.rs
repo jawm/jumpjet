@@ -4,7 +4,6 @@ use parser::leb::ReadLEB;
 use parser::Parse;
 use parser::ParseError;
 
-use tree::functions::Function;
 use tree::language_types::LanguageType;
 use tree::language_types::ValueType;
 use tree::Module;
@@ -12,36 +11,37 @@ use tree::section::Section;
 use tree::types::TypeEntry;
 use tree::types::TypeSection;
 
+use tree::types::TypeDefinition;
+use tree::types::TypeInstance;
+
+use tree::functions::FuncSignature;
+
 pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     let bytes = &mut reader.bytes();
     let count = bytes.read_varuint(32).unwrap();
-    let mut types: Vec<TypeEntry> = vec![];
-    for entry in 0..count {
+    for _ in 0..count {
         let form = LanguageType::parse(bytes)?;
-        if form != LanguageType::func {
-            // WASM 1.0 requires all imports to be of type `func`
-            return Err(ParseError::InvalidTypeForm);
+        match form {
+            func => {
+                let parameter_count = bytes.read_varuint(32).unwrap();
+                let mut parameters: Vec<ValueType> = vec![];
+                for _ in 0..parameter_count {
+                    parameters.push(ValueType::parse(bytes)?);
+                }
+                let return_count =  bytes.read_varuint(1).unwrap();
+                let mut returns: Vec<ValueType> = vec![];
+                if return_count > 1 {
+                    return Err(ParseError::TooManyReturns);
+                } else if return_count == 1 {
+                    returns.push(ValueType::parse(bytes)?);
+                }
+                module.types.push(TypeDefinition::func(FuncSignature {
+                    parameters,
+                    returns,
+                }));
+            },
+            _ => return Err(ParseError::CustomError("WASM 1.0 requires all defined types to be of type `func`".to_string()))
         }
-        let param_count = bytes.read_varuint(32).unwrap();
-        let mut params: Vec<ValueType> = vec![];
-        for param_index in 0..param_count {
-            params.push(ValueType::parse(bytes)?);
-        }
-        let return_count =  bytes.read_varuint(1).unwrap();
-        let mut returns: Vec<ValueType> = vec![];
-        if return_count > 1 {
-            return Err(ParseError::TooManyReturns);
-        } else if return_count == 1 {
-            returns.push(ValueType::parse(bytes)?);
-        }
-        module.functions.push(Function{signature: TypeEntry{form,params,returns}});
     }
     Ok(())
-}
-
-
-impl Parse for TypeSection {
-    fn parse(_reader: &mut Read, _module: &Module) -> Result<Box<Section>, ParseError> {
-        Err(ParseError::WrongMagicNumber)
-    }
 }

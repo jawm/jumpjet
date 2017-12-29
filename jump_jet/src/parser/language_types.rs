@@ -72,30 +72,13 @@ impl ExternalKind {
 
 	pub fn by_index(reader: &mut Read, module: &Module) -> Result<ExternalKind, ParseError> {
 		let external_kind = reader.read_u8()?;
-		// Ok(match external_kind {
-		// 	0 => ExternalKind::function(
-		// 		module.get_section::<FunctionSection>(3).unwrap().functions[
-		// 			reader.bytes().read_varuint(32)? as usize
-		// 		]
-		// 	),
-		// 	1 => ExternalKind::table(
-		// 		module.get_section::<TableSection>(3).unwrap().entries[
-		// 			reader.bytes().read_varuint(32)? as usize
-		// 		]
-		// 	),
-		// 	2 => ExternalKind::memory(
-		// 		module.get_section::<MemorySection>(3).unwrap().entries[
-		// 			reader.bytes().read_varuint(32)? as usize
-		// 		]
-		// 	),
-		// 	3 => ExternalKind::global(
-		// 		module.get_section::<GlobalSection>(3).unwrap().entries[
-		// 			reader.bytes().read_varuint(32)? as usize
-		// 		].data_type
-		// 	),
-		// 	_ => return Err(ParseError::InvalidExternalKind(external_kind))
-		// })
-		Err(ParseError::CustomError("commented out line 97".to_string()))
+		Ok(match external_kind {
+			0 => ExternalKind::function(reader.bytes().read_varuint(32)? as usize),
+			1 => ExternalKind::table(reader.bytes().read_varuint(32)? as usize),
+			2 => ExternalKind::memory(reader.bytes().read_varuint(32)? as usize),
+			3 => ExternalKind::global(reader.bytes().read_varuint(32)? as usize),
+			_ => return Err(ParseError::InvalidExternalKind(external_kind))
+		})
 	}
 }
 
