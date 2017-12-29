@@ -1,31 +1,29 @@
-use tree::types::TypeEntry;
-
 #[derive(Debug)]
 #[derive(Clone)]
 #[derive(PartialEq)]
 pub enum ValueType {
-    i_32,
-    i_64,
-    f_32,
-    f_64,
+    I32,
+    I64,
+    F32,
+    F64,
 }
 
 #[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Clone)]
 pub enum LanguageType {
-    value(ValueType),
-    anyfunc, // no static signature validation check
-    func,
-    empty_block,
+    Value(ValueType),
+    Anyfunc, // no static signature validation check
+    Func,
+    EmptyBlock,
 }
 
 #[derive(Debug)]
 pub enum ExternalKind {
-    function(usize), // possibly have it go into the types section, instead of storing index
-    table(usize),
-    memory(usize),
-    global(usize),
+    Function(usize), // possibly have it go into the types section, instead of storing index
+    Table(usize),
+    Memory(usize),
+    Global(usize),
 }
 
 #[derive(Debug)]
@@ -40,225 +38,221 @@ pub struct ResizableLimits {
     pub maximum: Option<u64>,
 }
 
-// Pretty much just including this to have a nicer name, and if we ever add stuff to MemoryType
-// I guess
-#[derive(Debug)]
-pub struct MemoryType {
-    pub limits: ResizableLimits
-}
-
 #[derive(Debug)]
 pub struct GlobalType {
-    pub contentType: ValueType,
+    pub content_type: ValueType,
     pub mutability: bool,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum InitExpressions {
-    i32_const(i64),
-    i64_const(i64),
-    f32_const(u64),
-    f64_const(u64),
-    get_global(u64),
+    I32Const(i64),
+    I64Const(i64),
+    F32Const(u64),
+    F64Const(u64),
+    GetGlobal(u64),
 }
 
+// TODO Remove this annotation once we implement this stuff
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum Operation {
     // control flow
-    unreachable,
-    nop,
-    block(BlockType),
-    repeated(BlockType), // loop
-    condition(BlockType), // if
-    not_condition, // else - TODO should have BlockType immediate?
-    end,
-    escape(u64), // varuint32 | break from block
-    escape_if(u64), // varuint32 | break if condition
-    branch_table(BranchTable), // br_table
-    return_value, // return
+    Unreachable,
+    Nop,
+    Block(BlockType),
+    Repeated(BlockType), // loop
+    Condition(BlockType), // if
+    NotCondition, // else - TODO should have BlockType immediate?
+    End,
+    Escape(u64), // varuint32 | break from block
+    EscapeIf(u64), // varuint32 | break if condition
+    BranchTable(BranchTable), // br_table
+    ReturnValue, // return
 
     // callers
-    call(u64), // varuint32
-    call_indirect(u64), // varuint32, reserved
+    Call(u64), // varuint32
+    CallIndirect(u64), // varuint32, reserved
 
     // parametric
-    drop,
-    select,
+    Drop,
+    Select,
 
     // variable access
-    get_local(u64), // all varuint32
-    set_local(u64),
-    tee_local(u64),
-    get_global(u64),
-    set_global(u64),
+    GetLocal(u64), // all varuint32
+    SetLocal(u64),
+    TeeLocal(u64),
+    GetGlobal(u64),
+    SetGlobal(u64),
 
     // Memory related
-    i32_load(MemoryImmediate),
-    i64_load(MemoryImmediate),
-    f32_load(MemoryImmediate),
-    f64_load(MemoryImmediate),
-    i32_load_8(MemoryImmediate),
-    u32_load_8(MemoryImmediate),
-    i32_load_16(MemoryImmediate),
-    u32_load_16(MemoryImmediate),
-    i64_load_8(MemoryImmediate),
-    u64_load_8(MemoryImmediate),
-    i64_load_16(MemoryImmediate),
-    u64_load_16(MemoryImmediate),
-    i64_load_32(MemoryImmediate),
-    u64_load_32(MemoryImmediate),
-    i32_store(MemoryImmediate),
-    i64_store(MemoryImmediate),
-    f32_store(MemoryImmediate),
-    f64_store(MemoryImmediate),
-    i32_store_8(MemoryImmediate),
-    i32_store_16(MemoryImmediate),
-    i64_store_8(MemoryImmediate),
-    i64_store_16(MemoryImmediate),
-    i64_store_32(MemoryImmediate),
-    current_memory(u64), // varuint1, reserved
-    grow_memory(u64), // varuint1, reserved
+    I32Load(MemoryImmediate),
+    I64Load(MemoryImmediate),
+    F32Load(MemoryImmediate),
+    F64Load(MemoryImmediate),
+    I32Load8(MemoryImmediate),
+    U32Load8(MemoryImmediate),
+    I32Load16(MemoryImmediate),
+    U32Load16(MemoryImmediate),
+    I64Load8(MemoryImmediate),
+    U64Load8(MemoryImmediate),
+    I64Load16(MemoryImmediate),
+    U64Load16(MemoryImmediate),
+    I64Load32(MemoryImmediate),
+    U64Load32(MemoryImmediate),
+    I32Store(MemoryImmediate),
+    I64Store(MemoryImmediate),
+    F32Store(MemoryImmediate),
+    F64Store(MemoryImmediate),
+    I32Store8(MemoryImmediate),
+    I32Store16(MemoryImmediate),
+    I64Store8(MemoryImmediate),
+    I64Store16(MemoryImmediate),
+    I64Store32(MemoryImmediate),
+    CurrentMemory(u64), // varuint1, reserved
+    GrowMemory(u64), // varuint1, reserved
 
     // constants
-    i32_const,
-    i64_const,
-    f32_const,
-    f64_const,
+    I32Const,
+    I64Const,
+    F32Const,
+    F64Const,
 
     // comparisons
-    i32_eqz,
-    i32_eq,
-    i32_ne,
-    i32_lt,
-    u32_lt,
-    i32_gt,
-    u32_gt,
-    i32_le,
-    u32_le,
-    i32_ge,
-    u32_ge,
+    I32Eqz,
+    I32Eq,
+    I32Ne,
+    I32Lt,
+    U32Lt,
+    I32Gt,
+    U32Gt,
+    I32Le,
+    U32Le,
+    I32Ge,
+    U32Ge,
 
-    i64_eqz,
-    i64_eq,
-    i64_ne,
-    i64_lt,
-    u64_lt,
-    i64_gt,
-    u64_gt,
-    i64_le,
-    u64_le,
-    i64_ge,
-    u64_ge,
+    I64Eqz,
+    I64Eq,
+    I64Ne,
+    I64Lt,
+    U64Lt,
+    I64Gt,
+    U64Gt,
+    I64Le,
+    U64Le,
+    I64Ge,
+    U64Ge,
 
-    f32_eq,
-    f32_ne,
-    f32_lt,
-    f32_gt,
-    f32_le,
-    f32_ge,
+    F32Eq,
+    F32Ne,
+    F32Lt,
+    F32Gt,
+    F32Le,
+    F32Ge,
 
-    f64_eq,
-    f64_ne,
-    f64_lt,
-    f64_gt,
-    f64_le,
-    f64_ge,
+    F64Eq,
+    F64Ne,
+    F64Lt,
+    F64Gt,
+    F64Le,
+    F64Ge,
 
     // numeric
-    i32_clz,
-    i32_ctz,
-    i32_popcnt,
-    i32_add,
-    i32_sub,
-    i32_mul,
-    i32_div,
-    u32_div,
-    i32_rem,
-    u32_rem,
-    i32_and,
-    i32_or,
-    i32_xor,
-    i32_shl,
-    i32_shr,
-    u32_shr,
-    i32_rotl,
-    i32_rotr,
+    I32Clz,
+    I32Ctz,
+    I32Popcnt,
+    I32Add,
+    I32Sub,
+    I32Mul,
+    I32Div,
+    U32Div,
+    I32Rem,
+    U32Rem,
+    I32And,
+    I32Or,
+    I32Xor,
+    I32Shl,
+    I32Shr,
+    U32Shr,
+    I32Rotl,
+    I32Rotr,
 
-    i64_clz,
-    i64_ctz,
-    i64_popcnt,
-    i64_add,
-    i64_sub,
-    i64_mul,
-    i64_div,
-    u64_div,
-    i64_rem,
-    u64_rem,
-    i64_and,
-    i64_or,
-    i64_xor,
-    i64_shl,
-    i64_shr,
-    u64_shr,
-    i64_rotl,
-    i64_rotr,
+    I64Clz,
+    I64Ctz,
+    I64Popcnt,
+    I64Add,
+    I64Sub,
+    I64Mul,
+    I64Div,
+    U64Div,
+    I64Rem,
+    U64Rem,
+    I64And,
+    I64Or,
+    I64Xor,
+    I64Shl,
+    I64Shr,
+    U64Shr,
+    I64Rotl,
+    I64Rotr,
 
-    f32_abs,
-    f32_neg,
-    f32_ceil,
-    f32_floor,
-    f32_trunc,
-    f32_nearest,
-    f32_sqrt,
-    f32_add,
-    f32_sub,
-    f32_mul,
-    f32_div,
-    f32_min,
-    f32_max,
-    f32_copysign,
+    F32Abs,
+    F32Neg,
+    F32Ceil,
+    F32Floor,
+    F32Trunc,
+    F32Nearest,
+    F32Sqrt,
+    F32Add,
+    F32Sub,
+    F32Mul,
+    F32Div,
+    F32Min,
+    F32Max,
+    F32Copysign,
 
-    f64_abs,
-    f64_neg,
-    f64_ceil,
-    f64_floor,
-    f64_trunc,
-    f64_nearest,
-    f64_sqrt,
-    f64_add,
-    f64_sub,
-    f64_mul,
-    f64_div,
-    f64_min,
-    f64_max,
-    f64_copysign,
+    F64Abs,
+    F64Neg,
+    F64Ceil,
+    F64Floor,
+    F64Trunc,
+    F64Nearest,
+    F64Sqrt,
+    F64Add,
+    F64Sub,
+    F64Mul,
+    F64Div,
+    F64Min,
+    F64Max,
+    F64Copysign,
 
     // conversions
-    i32_wrap_i64,
-    i32_trunc_f32,
-    u32_trunc_f32,
-    i32_trunc_f64,
-    u32_trunc_f64,
-    i64_extend_i32,
-    u64_extend_i32,
-    i64_trunc_f32,
-    u64_trunc_f32,
-    i64_trunc_f64,
-    u64_trunc_f64,
-    f32_convert_s_i32,
-    f32_convert_u_i32,
-    f32_convert_s_i64,
-    f32_convert_u_i64,
-    f32_demote_f64,
-    f64_convert_s_i32,
-    f64_convert_u_i32,
-    f64_promote_f32,
+    I32WrapI64,
+    I32TruncF32,
+    U32TruncF32,
+    I32TruncF64,
+    U32TruncF64,
+    I64ExtendI32,
+    U64ExtendI32,
+    I64TruncF32,
+    U64TruncF32,
+    I64TruncF64,
+    U64TruncF64,
+    F32ConvertSI32,
+    F32ConvertUI32,
+    F32ConvertSI64,
+    F32ConvertUI64,
+    F32DemoteF64,
+    F64ConvertSI32,
+    F64ConvertUI32,
+    F64PromoteF32,
 
     // reinterpretations
-    i32_reinterpret_f32,
-    i64_reinterpret_f64,
-    f32_reinterpret_i32,
-    f64_reinterpret_i64,
+    I32ReinterpretF32,
+    I64ReinterpretF64,
+    F32ReinterpretI32,
+    F64ReinterpretI64,
 }
 
 #[derive(Debug)]

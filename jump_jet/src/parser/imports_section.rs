@@ -13,7 +13,7 @@ pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     for _ in 0..count {
         let module_name = read_string(reader)?;
         let field = read_string(reader)?;
-        let kind = ExternalKind::parse(reader, module)?;
+        let kind = ExternalKind::parse(reader)?;
 
         if !module.imports.contains_key(&module_name) {
             let mut map = HashMap::new();

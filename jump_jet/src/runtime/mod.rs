@@ -11,13 +11,13 @@ use std::path::Path;
 use parser::ModuleParser;
 
 pub struct Runtime {
-    exposed: HashMap<
-        String, 
-        HashMap<
-            String,
-            fn(Vec<ValueType>) -> Vec<ValueType>
-        >
-    >,
+    // exposed: HashMap<
+    //     String, 
+    //     HashMap<
+    //         String,
+    //         fn(Vec<ValueType>) -> Vec<ValueType>
+    //     >
+    // >,
     modules: HashMap<String, Module>,
     parser: ModuleParser
 }
@@ -25,7 +25,7 @@ pub struct Runtime {
 impl Runtime {
     pub fn new() -> Runtime {
         Runtime {
-            exposed: HashMap::new(),
+            // exposed: HashMap::new(),
             modules: HashMap::new(),
             parser: ModuleParser::default()
         }

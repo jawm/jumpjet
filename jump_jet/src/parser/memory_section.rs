@@ -3,11 +3,9 @@ use std::io::Read;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
-use tree::language_types::MemoryType;
 use tree::language_types::ResizableLimits;
 use tree::memory::Memory;
 use tree::Module;
-use tree::section::Section;
 
 pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();

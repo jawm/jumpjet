@@ -5,12 +5,11 @@ use self::byteorder::LittleEndian;
 use self::leb::ReadLEB;
 
 use std::io;
+use std::io::ErrorKind;
 use std::io::Read;
 use std::collections::HashMap;
 
-use super::tree::Module;
-use super::tree::section::Section;
-use super::tree::types::*;
+use tree::Module;
 
 mod utils;
 
@@ -52,10 +51,6 @@ impl From<io::Error> for ParseError {
     }
 }
 
-pub trait Parse {
-    fn parse(reader: &mut Read, module: &Module) -> Result<Box<Section>, ParseError>;
-}
-
 pub struct ModuleParser {
     sections: HashMap<
         u64,
@@ -64,8 +59,6 @@ pub struct ModuleParser {
         >
     >
 }
-
-use std::io::ErrorKind;
 
 impl ModuleParser {
 
@@ -127,12 +120,12 @@ impl ModuleParser {
                 }
             };
             println!("parsing section {}", id);
-            let section = match self.parse_section(id, reader, module) {
-                Ok(section) => section,
+            match self.parse_section(id, reader, module) {
                 Err(error) => {
                     println!("Failure parsing section {}", id);
                     return Err(error)
-                }
+                },
+                _ => {}
             };
             println!("Section parsed {}", id);
         }

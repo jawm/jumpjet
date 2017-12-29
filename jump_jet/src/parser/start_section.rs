@@ -4,9 +4,6 @@ use parser::leb::ReadLEB;
 use parser::ParseError;
 
 use tree::Module;
-use tree::section::Section;
-use tree::start::StartSection;
-use tree::types::TypeSection;
 
 pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     //Err(ParseError::CustomError("not implemented yet".to_string()))

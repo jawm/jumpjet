@@ -4,15 +4,10 @@ use parser::leb::ReadLEB;
 use parser::ParseError;
 use parser::utils;
 
-use tree::elements::ElementSection;
-use tree::elements::ElementSegment;
 use tree::Module;
-use tree::section::Section;
-use tree::types::TypeSection;
-
 use tree::tables::Table;
 
-pub fn parse(mut reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
+pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();
     for _ in 0..count {
         let index = reader.bytes().read_varuint(32).unwrap() as usize;

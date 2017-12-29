@@ -1,18 +1,13 @@
 use std::io::Read;
 
 use parser::leb::ReadLEB;
-use parser::Parse;
 use parser::ParseError;
 
 use tree::language_types::LanguageType;
 use tree::language_types::ValueType;
 use tree::Module;
-use tree::section::Section;
-use tree::types::TypeEntry;
-use tree::types::TypeSection;
 
 use tree::types::TypeDefinition;
-use tree::types::TypeInstance;
 
 use tree::functions::FuncSignature;
 
@@ -22,7 +17,7 @@ pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     for _ in 0..count {
         let form = LanguageType::parse(bytes)?;
         match form {
-            func => {
+            LanguageType::Func => {
                 let parameter_count = bytes.read_varuint(32).unwrap();
                 let mut parameters: Vec<ValueType> = vec![];
                 for _ in 0..parameter_count {
@@ -35,7 +30,7 @@ pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
                 } else if return_count == 1 {
                     returns.push(ValueType::parse(bytes)?);
                 }
-                module.types.push(TypeDefinition::func(FuncSignature {
+                module.types.push(TypeDefinition::Func(FuncSignature {
                     parameters,
                     returns,
                 }));

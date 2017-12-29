@@ -5,10 +5,8 @@ use parser::leb::ReadLEB;
 use parser::ParseError;
 
 use tree::globals::Global;
-use tree::globals::GlobalSection;
 use tree::language_types::GlobalType;
 use tree::Module;
-use tree::section::Section;
 
 pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();

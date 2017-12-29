@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate mopa;
-
 pub use runtime::Runtime;
 
 mod tree;

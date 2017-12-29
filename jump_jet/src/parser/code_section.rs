@@ -4,14 +4,12 @@ use parser::leb::ReadLEB;
 use parser::ParseError;
 use parser::utils;
 
-use tree::code::CodeSection;
 use tree::code::FunctionBody;
 use tree::language_types::ValueType;
 use tree::Module;
-use tree::section::Section;
 
 // TODO finish implementing.
-pub fn parse(mut reader: &mut Read, _module: &mut Module) -> Result<(), ParseError> {
+pub fn parse(reader: &mut Read, _module: &mut Module) -> Result<(), ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();
     let mut function_bodies = vec![];
     for _ in 0..count {
