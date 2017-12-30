@@ -1,4 +1,3 @@
-use std::io::Bytes;
 use std::io::Read;
 
 use parser::leb::ReadLEB;
@@ -11,9 +10,4 @@ pub fn read_string(reader: &mut Read) -> Result<String,ParseError> {
     	Ok(_) => Ok(field),
     	Err(e) => Err(ParseError::Io(e))
     }
-}
-
-pub fn swallow_expr<R: Read>(bytes: &mut Bytes<R>) -> i64 {
-    while bytes.next().unwrap().unwrap() != 0x0b {};
-    0
 }

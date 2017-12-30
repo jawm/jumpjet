@@ -1,13 +1,20 @@
 use std::io::Bytes;
 use std::io::Read;
 
+use parser::byteorder::LittleEndian;
 use parser::byteorder::ReadBytesExt;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
-use tree::language_types::{ValueType, LanguageType, ExternalKind, TableType};
-use tree::language_types::ResizableLimits;
+use tree::language_types::ExternalKind;
 use tree::language_types::GlobalType;
+use tree::language_types::InitExpression;
+use tree::language_types::LanguageType;
+use tree::language_types::Operation;
+use tree::language_types::ResizableLimits;
+use tree::language_types::TableType;
+use tree::language_types::ValueType;
+use tree::Module;
 
 impl ValueType {
 	pub fn parse<R: Read>(bytes: &mut Bytes<R>) -> Result<ValueType, ParseError> {
@@ -108,6 +115,120 @@ impl TableType {
 				}
 			},
 			Err(e) => Err(e)
+		}
+	}
+}
+
+impl InitExpression {
+	pub fn parse(reader: &mut Read, module: &Module) -> Result<InitExpression, ParseError> {
+		let byte = reader.bytes().next().unwrap().unwrap();
+		match byte {
+			0x41 => {
+				let immediate = reader.bytes().read_varint(32).unwrap() as i32;
+				let end_op = reader.bytes().next().unwrap().unwrap();
+				if end_op != 0x0b {
+					Err(ParseError::CustomError("invalid i32.const instruction in init expression".to_string()))
+				} else {
+					Ok(InitExpression::I32Const(immediate))
+				}
+			},
+			0x42 => {
+				let immediate = reader.bytes().read_varint(64).unwrap();
+				let end_op = reader.bytes().next().unwrap().unwrap();
+				if end_op != 0x0b {
+					Err(ParseError::CustomError("invalid i64.const instruction in init expression".to_string()))
+				} else {
+					Ok(InitExpression::I64Const(immediate))
+				}
+			},
+			0x43 => {
+				let immediate = reader.read_u32::<LittleEndian>().unwrap() as f32;
+				let end_op = reader.bytes().next().unwrap().unwrap();
+				if end_op != 0x0b {
+					Err(ParseError::CustomError("invalid f32.const instruction in init expression".to_string()))
+				} else {
+					Ok(InitExpression::F32Const(immediate))
+				}
+			},
+			0x44 => {
+				let immediate = reader.read_u64::<LittleEndian>().unwrap() as f64;
+				let end_op = reader.bytes().next().unwrap().unwrap();
+				if end_op != 0x0b {
+					Err(ParseError::CustomError("invalid f64.const instruction in init expression".to_string()))
+				} else {
+					Ok(InitExpression::F64Const(immediate))
+				}
+			},
+			0x23 => {
+				let immediate = reader.bytes().read_varint(32).unwrap() as usize;
+				let end_op = reader.bytes().next().unwrap().unwrap();
+				if end_op != 0x0b {
+					Err(ParseError::CustomError("invalid get_global instruction in init expression".to_string()))
+				} else if module.globals[immediate].constraints.mutability {
+					Err(ParseError::CustomError("get_global in init expressions can only refer to immutable globals".to_string()))
+				} else {
+					Ok(InitExpression::GetGlobal(immediate))
+				}
+			},
+			_ => Err(ParseError::CustomError("Unexpected byte in init expression".to_string()))
+		}
+	}
+}
+
+impl Operation {
+	pub fn parse_multiple(reader: &mut Read, module: &Module) -> Result<Vec<Operation>, ParseError> {
+		let mut ops = vec![];
+		loop {
+			match Operation::parse(reader, module) {
+				Ok(operation) => {
+					if let Operation::End = operation {
+						ops.push(operation);
+						break;
+					}
+					ops.push(operation);
+				},
+				Err(e) => {return Err(e);}
+			}
+		}
+		println!("/break");
+		Ok(ops)
+	}
+
+	pub fn parse(reader: &mut Read, module: &Module) -> Result<Operation, ParseError> {
+		let opcode = reader.bytes().next().unwrap().unwrap();
+		print!("{:X} ", opcode);
+		match opcode {
+			0x0b => Ok(Operation::End),
+			0x11 => {
+				let type_index = reader.bytes().read_varuint(32).unwrap() as usize;
+				let reserved = reader.bytes().read_varuint(1).unwrap() == 1;
+				if reserved {
+					return Err(ParseError::CustomError("call_indirect reserved field must be 0".to_string()));
+				}
+				Ok(Operation::CallIndirect(type_index, reserved))
+
+			}
+			0x20 => {
+				let immediate = reader.bytes().read_varuint(32).unwrap() as u32;
+				Ok(Operation::GetLocal(immediate))
+			}
+			0x41 => {
+				let immediate = reader.bytes().read_varint(32).unwrap() as i32;
+				Ok(Operation::I32Const(immediate))
+			},
+			0x42 => {
+				let immediate = reader.bytes().read_varint(64).unwrap();
+				Ok(Operation::I64Const(immediate))
+			},
+			0x43 => {
+				let immediate = reader.read_u32::<LittleEndian>().unwrap() as f32;
+				Ok(Operation::F32Const(immediate))
+			},
+			0x44 => {
+				let immediate = reader.read_u64::<LittleEndian>().unwrap() as f64;
+				Ok(Operation::F64Const(immediate))
+			},
+			_ => Err(ParseError::CustomError("Unknown opcode".to_string()))
 		}
 	}
 }

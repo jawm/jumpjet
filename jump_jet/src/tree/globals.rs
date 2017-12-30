@@ -1,7 +1,8 @@
-use super::language_types::GlobalType;
+use tree::language_types::GlobalType;
+use tree::language_types::InitExpression;
 
 #[derive(Debug)]
 pub struct Global {
     pub constraints: GlobalType,
-    pub value: i64 // TODO should be an init_expr
+    pub value: InitExpression
 }

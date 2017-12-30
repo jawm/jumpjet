@@ -4,5 +4,3 @@ use tree::functions::FuncSignature;
 pub enum TypeDefinition {
     Func(FuncSignature)
 }
-pub trait TypeInstance {}
-

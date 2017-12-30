@@ -4,6 +4,7 @@ use parser::leb::ReadLEB;
 use parser::ParseError;
 
 use tree::functions::Function;
+use tree::functions::FuncBody;
 use tree::Module;
 use tree::types::TypeDefinition;
 
@@ -14,7 +15,10 @@ pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     for _ in 0..count {
         let index = bytes.read_varuint(32).unwrap();
         if let Some(&TypeDefinition::Func(ref signature)) = module.types.get(index as usize) {
-            module.functions.push(Function {signature: signature.clone()});
+            module.functions.push(Function {
+                signature: signature.clone(),
+                body: FuncBody::new()
+            });
         } else {
             return Err(ParseError::CustomError("The type doesn't exist or isn't a function signature".to_string()));
         }

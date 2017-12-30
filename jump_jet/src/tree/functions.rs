@@ -1,9 +1,10 @@
+use tree::language_types::Operation;
 use tree::language_types::ValueType;
-use tree::types::TypeInstance;
 
 #[derive(Clone, Debug)]
 pub struct Function {
-    pub signature: FuncSignature
+    pub signature: FuncSignature,
+    pub body: FuncBody,
 }
 
 #[derive(Clone, Debug)]
@@ -11,4 +12,18 @@ pub struct FuncSignature {
     pub parameters: Vec<ValueType>,
     pub returns: Vec<ValueType>,
 }
-impl TypeInstance for FuncSignature {}
+
+#[derive(Clone, Debug)]
+pub struct FuncBody {
+    pub locals: Vec<ValueType>,
+    pub code: Vec<Operation>,
+}
+
+impl FuncBody {
+    pub fn new() -> Self {
+        FuncBody {
+            locals: vec![],
+            code: vec![],
+        }
+    }
+}

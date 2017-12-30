@@ -2,30 +2,31 @@ use std::io::Read;
 
 use parser::leb::ReadLEB;
 use parser::ParseError;
-use parser::utils;
 
-use tree::code::FunctionBody;
+use tree::language_types::Operation;
 use tree::language_types::ValueType;
 use tree::Module;
 
 // TODO finish implementing.
-pub fn parse(reader: &mut Read, _module: &mut Module) -> Result<(), ParseError> {
+pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
     let count = reader.bytes().read_varuint(32).unwrap();
-    let mut function_bodies = vec![];
-    for _ in 0..count {
-        let body_size = reader.bytes().read_varuint(32).unwrap();
+    for index in 0..count {
+        let _body_size = reader.bytes().read_varuint(32).unwrap();
         let local_count = reader.bytes().read_varuint(32).unwrap();
         let mut locals = vec![];
         for _ in 0..local_count {
-            let local_quantity = reader.bytes().read_varuint(32).unwrap();
+            let local_quantity = reader.bytes().read_varuint(32).unwrap() as usize;
             let local_type = ValueType::parse(&mut reader.bytes())?;
-            locals.push((local_quantity, local_type));
+            let mut l = vec![local_type; local_quantity];
+            locals.append(&mut l);
         }
-        utils::swallow_expr(&mut reader.bytes());
-        function_bodies.push(FunctionBody {
-            locals,
-            code: vec![]
-        });
+        match Operation::parse_multiple(reader, module) {
+            Ok(code) => {
+                module.functions[index as usize].body.locals = locals;
+                module.functions[index as usize].body.code = code;
+            },
+            Err(e) => {return Err(e)},
+        }
     }
     Ok(())
 }

@@ -44,18 +44,16 @@ pub struct GlobalType {
     pub mutability: bool,
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
-pub enum InitExpressions {
-    I32Const(i64),
+pub enum InitExpression {
+    I32Const(i32),
     I64Const(i64),
-    F32Const(u64),
-    F64Const(u64),
-    GetGlobal(u64),
+    F32Const(f32),
+    F64Const(f64),
+    GetGlobal(usize),
 }
 
-// TODO Remove this annotation once we implement this stuff
-#[allow(dead_code)]
+#[derive(Clone)]
 #[derive(Debug)]
 pub enum Operation {
     // control flow
@@ -73,14 +71,14 @@ pub enum Operation {
 
     // callers
     Call(u64), // varuint32
-    CallIndirect(u64), // varuint32, reserved
+    CallIndirect(usize, bool), // varuint32, reserved
 
     // parametric
     Drop,
     Select,
 
     // variable access
-    GetLocal(u64), // all varuint32
+    GetLocal(u32), // all varuint32
     SetLocal(u64),
     TeeLocal(u64),
     GetGlobal(u64),
@@ -114,10 +112,10 @@ pub enum Operation {
     GrowMemory(u64), // varuint1, reserved
 
     // constants
-    I32Const,
-    I64Const,
-    F32Const,
-    F64Const,
+    I32Const(i32),
+    I64Const(i64),
+    F32Const(f32),
+    F64Const(f64),
 
     // comparisons
     I32Eqz,
@@ -255,17 +253,22 @@ pub enum Operation {
     F64ReinterpretI64,
 }
 
+// TODO remove this annotation boi
+#[allow(dead_code)]
+#[derive(Clone)]
 #[derive(Debug)]
 pub struct MemoryImmediate {
     flags: u64, // varuint32 - i have no idea what this is
     offset: u64, // varuint32
 }
 
+#[derive(Clone)]
 #[derive(Debug)]
 pub struct BlockType {
     signature: i64, // varint7 - either 0x40 or a ValueType
 }
 
+#[derive(Clone)]
 #[derive(Debug)]
 pub struct BranchTable {
     targets: Vec<u64>, // varuint32, possibly change to Vec<BlockType>

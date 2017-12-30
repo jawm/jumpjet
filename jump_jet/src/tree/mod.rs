@@ -6,7 +6,6 @@ pub mod memory;
 pub mod functions;
 pub mod tables;
 pub mod globals;
-pub mod code;
 
 #[derive(Debug)]
 pub struct Module {
@@ -19,5 +18,4 @@ pub struct Module {
     pub globals: Vec<globals::Global>,
     pub exports: HashMap<String, language_types::ExternalKind>,
     pub start_function: Option<functions::Function>,
-    // code
 }
