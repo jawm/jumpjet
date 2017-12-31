@@ -6,6 +6,8 @@ use parser::byteorder::ReadBytesExt;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
+use tree::language_types::BlockType;
+use tree::language_types::BranchTable;
 use tree::language_types::ExternalKind;
 use tree::language_types::GlobalType;
 use tree::language_types::InitExpression;
@@ -22,7 +24,7 @@ impl ValueType {
 		ValueType::get(read)
 	}
 
-	fn get(key: i64) -> Result<ValueType, ParseError> {
+	pub fn get(key: i64) -> Result<ValueType, ParseError> {
 		match key {
 			-0x01 => Ok(ValueType::I32),
 			-0x02 => Ok(ValueType::I64),
@@ -78,16 +80,6 @@ impl ResizableLimits {
         Ok(ResizableLimits{initial: initial, maximum:maximum})
 	}
 }
-
-// impl MemoryType {
-// 	pub fn parse(reader: &mut Read) -> Result<MemoryType, ParseError> {
-// 		let limits_res = ResizableLimits::parse(reader);
-// 		match limits_res {
-// 			Ok(limits) => Ok(MemoryType{limits}),
-// 			Err(e) => Err(e)
-// 		}
-// 	}
-// }
 
 impl GlobalType {
 	pub fn parse(reader: &mut Read) -> Result<GlobalType, ParseError> {
@@ -198,7 +190,31 @@ impl Operation {
 		let opcode = reader.bytes().next().unwrap().unwrap();
 		print!("{:X} ", opcode);
 		match opcode {
+			0x00 => Ok(Operation::Unreachable),
+			0x01 => Ok(Operation::Nop),
+			0x02 => match BlockType::parse(reader, module) {
+				Ok(block) => Ok(Operation::Block(block)),
+				Err(e) => Err(e)
+			},
+			0x03 => match BlockType::parse(reader, module) {
+				Ok(block) => Ok(Operation::Loop(block)),
+				Err(e) => Err(e)
+			},
+			0x04 => match BlockType::parse(reader, module) {
+				Ok(block) => Ok(Operation::If(block)),
+				Err(e) => Err(e)
+			},
+			0x05 => Ok(Operation::Else),
 			0x0b => Ok(Operation::End),
+			0x0c => Ok(Operation::Branch(reader.bytes().read_varuint(32).unwrap() as u32)),
+			0x0d => Ok(Operation::BranchIf(reader.bytes().read_varuint(32).unwrap() as u32)),
+			0x0e => {
+				match BranchTable::parse(reader, module) {
+					Ok(branch_table) => Ok(Operation::BranchTable(branch_table)),
+					Err(e) => Err(e)
+				}
+			},
+			0x0f => Ok(Operation::Return),
 			0x11 => {
 				let type_index = reader.bytes().read_varuint(32).unwrap() as usize;
 				let reserved = reader.bytes().read_varuint(1).unwrap() == 1;
@@ -230,5 +246,33 @@ impl Operation {
 			},
 			_ => Err(ParseError::CustomError("Unknown opcode".to_string()))
 		}
+	}
+}
+
+impl BlockType {
+	pub fn parse(reader: &mut Read, module: &Module) -> Result<BlockType, ParseError> {
+		let byte = reader.bytes().read_varint(7).unwrap();
+		if let Ok(value_type) = ValueType::get(byte) {
+			Ok(BlockType::Value(value_type))
+		} else if byte as u8 == 0x40 {
+			Ok(BlockType::Empty)
+		} else {
+			Err(ParseError::CustomError("Block type wasn't valid".to_string()))
+		}
+	}
+}
+
+impl BranchTable {
+	pub fn parse(reader: &mut Read, module: &Module) -> Result<BranchTable, ParseError> {
+		let target_count = reader.bytes().read_varuint(32).unwrap() as u32;
+		let mut targets = vec![];
+		for _ in 0..target_count {
+			targets.push(reader.bytes().read_varuint(32).unwrap() as u32);
+		}
+		let default = reader.bytes().read_varuint(32).unwrap() as usize;
+		Ok(BranchTable {
+			targets,
+			default
+		})
 	}
 }

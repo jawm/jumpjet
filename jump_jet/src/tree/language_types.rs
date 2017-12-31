@@ -60,14 +60,14 @@ pub enum Operation {
     Unreachable,
     Nop,
     Block(BlockType),
-    Repeated(BlockType), // loop
-    Condition(BlockType), // if
-    NotCondition, // else - TODO should have BlockType immediate?
+    Loop(BlockType), // loop
+    If(BlockType), // if
+    Else, // else - TODO should have BlockType immediate?
     End,
-    Escape(u64), // varuint32 | break from block
-    EscapeIf(u64), // varuint32 | break if condition
+    Branch(u32), // varuint32 | break from block
+    BranchIf(u32), // varuint32 | break if condition
     BranchTable(BranchTable), // br_table
-    ReturnValue, // return
+    Return, // return
 
     // callers
     Call(u64), // varuint32
@@ -264,13 +264,14 @@ pub struct MemoryImmediate {
 
 #[derive(Clone)]
 #[derive(Debug)]
-pub struct BlockType {
-    signature: i64, // varint7 - either 0x40 or a ValueType
+pub enum BlockType {
+    Value(ValueType),
+    Empty
 }
 
 #[derive(Clone)]
 #[derive(Debug)]
 pub struct BranchTable {
-    targets: Vec<u64>, // varuint32, possibly change to Vec<BlockType>
-    default: u64,
+    pub targets: Vec<u32>, // varuint32, possibly change to Vec<BlockType>
+    pub default: usize,
 }

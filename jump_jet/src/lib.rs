@@ -1,6 +1,7 @@
-pub use runtime::Runtime;
+pub use runtime::instantiate;
 
-mod tree;
-mod parser;
-mod runtime;
-mod provider;
+pub mod tree;
+pub mod parser;
+#[macro_use]
+pub mod runtime;
+pub mod provider;

@@ -1,23 +1,28 @@
-use std::io::prelude::*;
+use std::io::Read;
+
 use tree::language_types::ValueType;
 use tree::Module;
 use std::collections::HashMap;
-use std::io::Cursor;
 use std::fs::File;
 use std::error::Error;
 use std::path::Path;
 
-
 use parser::ModuleParser;
+use parser::ParseError;
+
+#[macro_use]
+pub mod exports;
+pub mod language_types;
+
+pub fn instantiate(reader: &mut Read, imports: HashMap<String, HashMap<String, u32>>) -> Result<Module, ParseError> {
+    let parser = ModuleParser::default();
+    parser.parse_module(reader)
+}
+
+
+
 
 pub struct Runtime {
-    // exposed: HashMap<
-    //     String, 
-    //     HashMap<
-    //         String,
-    //         fn(Vec<ValueType>) -> Vec<ValueType>
-    //     >
-    // >,
     modules: HashMap<String, Module>,
     parser: ModuleParser
 }
@@ -43,12 +48,8 @@ impl Runtime {
             Err(why) => panic!("couldn't open {}: {}", display, why.description()),
             Ok(file) => file,
         };
-        let mut buffer = vec![];
-        
-        file.read_to_end(&mut buffer).unwrap();
-        let mut reader = Cursor::new(&buffer[..]);
 
-        let module: Module = match self.parser.parse_module(&mut reader) {
+        let module: Module = match self.parser.parse_module(&mut file) {
             Ok(module) => module,
             Err(err) => panic!("Failed to parse module: {:?}", err)
         };
