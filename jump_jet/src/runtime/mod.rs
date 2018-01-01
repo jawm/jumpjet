@@ -13,6 +13,7 @@ use parser::ParseError;
 #[macro_use]
 pub mod exports;
 pub mod language_types;
+pub mod functions;
 
 pub fn instantiate(reader: &mut Read, imports: HashMap<String, HashMap<String, u32>>) -> Result<Module, ParseError> {
     let parser = ModuleParser::default();

@@ -32,5 +32,5 @@ fn main() {
     // }
 
     let module = jump_jet::instantiate(&mut File::open("program.wasm").unwrap(), HashMap::new()).unwrap();
-    module.exports.get_function("callByIndex", &module).unwrap()(args![1,2.4,3]);
+    module.exports.get_function("callByIndex", &module).unwrap()(args![1i32]);
 }
