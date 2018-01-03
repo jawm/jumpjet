@@ -70,7 +70,7 @@ pub enum Operation {
     Return, // return
 
     // callers
-    Call(u64), // varuint32
+    Call(usize), // varuint32
     CallIndirect(usize, bool), // varuint32, reserved
 
     // parametric
@@ -78,27 +78,27 @@ pub enum Operation {
     Select,
 
     // variable access
-    GetLocal(u32), // all varuint32
-    SetLocal(u64),
-    TeeLocal(u64),
-    GetGlobal(u64),
-    SetGlobal(u64),
+    GetLocal(usize), // all varuint32
+    SetLocal(usize),
+    TeeLocal(usize),
+    GetGlobal(usize),
+    SetGlobal(usize),
 
     // Memory related
     I32Load(MemoryImmediate),
     I64Load(MemoryImmediate),
     F32Load(MemoryImmediate),
     F64Load(MemoryImmediate),
-    I32Load8(MemoryImmediate),
-    U32Load8(MemoryImmediate),
-    I32Load16(MemoryImmediate),
-    U32Load16(MemoryImmediate),
-    I64Load8(MemoryImmediate),
-    U64Load8(MemoryImmediate),
-    I64Load16(MemoryImmediate),
-    U64Load16(MemoryImmediate),
-    I64Load32(MemoryImmediate),
-    U64Load32(MemoryImmediate),
+    I32Load8S(MemoryImmediate),
+    I32Load8U(MemoryImmediate),
+    I32Load16S(MemoryImmediate),
+    I32Load16U(MemoryImmediate),
+    I64Load8S(MemoryImmediate),
+    I64Load8U(MemoryImmediate),
+    I64Load16S(MemoryImmediate),
+    I64Load16U(MemoryImmediate),
+    I64Load32S(MemoryImmediate),
+    I64Load32U(MemoryImmediate),
     I32Store(MemoryImmediate),
     I64Store(MemoryImmediate),
     F32Store(MemoryImmediate),
@@ -108,8 +108,8 @@ pub enum Operation {
     I64Store8(MemoryImmediate),
     I64Store16(MemoryImmediate),
     I64Store32(MemoryImmediate),
-    CurrentMemory(u64), // varuint1, reserved
-    GrowMemory(u64), // varuint1, reserved
+    CurrentMemory(bool), // varuint1, reserved
+    GrowMemory(bool), // varuint1, reserved
 
     // constants
     I32Const(i32),
@@ -121,26 +121,26 @@ pub enum Operation {
     I32Eqz,
     I32Eq,
     I32Ne,
-    I32Lt,
-    U32Lt,
-    I32Gt,
-    U32Gt,
-    I32Le,
-    U32Le,
-    I32Ge,
-    U32Ge,
+    I32LtS,
+    I32LtU,
+    I32GtS,
+    I32GtU,
+    I32LeS,
+    I32LeU,
+    I32GeS,
+    I32GeU,
 
     I64Eqz,
     I64Eq,
     I64Ne,
-    I64Lt,
-    U64Lt,
-    I64Gt,
-    U64Gt,
-    I64Le,
-    U64Le,
-    I64Ge,
-    U64Ge,
+    I64LtS,
+    I64LtU,
+    I64GtS,
+    I64GtU,
+    I64LeS,
+    I64LeU,
+    I64GeS,
+    I64GeU,
 
     F32Eq,
     F32Ne,
@@ -254,12 +254,11 @@ pub enum Operation {
 }
 
 // TODO remove this annotation boi
-#[allow(dead_code)]
 #[derive(Clone)]
 #[derive(Debug)]
 pub struct MemoryImmediate {
-    flags: u64, // varuint32 - i have no idea what this is
-    offset: u64, // varuint32
+    flags: u32, // varuint32 - i have no idea what this is
+    offset: u32,
 }
 
 #[derive(Clone)]

@@ -109,7 +109,6 @@ impl ModuleParser {
     fn parse_sections<T: Read>(&self, module: &mut Module, reader: &mut T) -> Result<(), ParseError> {
 
         loop {
-
             let id = match reader.bytes().read_varuint(7) {
                 Ok(id) => id,
                 Err(e) => {

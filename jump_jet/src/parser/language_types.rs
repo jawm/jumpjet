@@ -12,6 +12,7 @@ use tree::language_types::ExternalKind;
 use tree::language_types::GlobalType;
 use tree::language_types::InitExpression;
 use tree::language_types::LanguageType;
+use tree::language_types::MemoryImmediate;
 use tree::language_types::Operation;
 use tree::language_types::ResizableLimits;
 use tree::language_types::TableType;
@@ -215,6 +216,11 @@ impl Operation {
 				}
 			},
 			0x0f => Ok(Operation::Return),
+
+			0x10 => {
+				let function_index = reader.bytes().read_varuint(32).unwrap() as usize;
+				Ok(Operation::Call(function_index))
+			}
 			0x11 => {
 				let type_index = reader.bytes().read_varuint(32).unwrap() as usize;
 				let reserved = reader.bytes().read_varuint(1).unwrap() == 1;
@@ -223,11 +229,179 @@ impl Operation {
 				}
 				Ok(Operation::CallIndirect(type_index, reserved))
 
-			}
+			},
+
+			0x1a => Ok(Operation::Drop),
+			0x1b => Ok(Operation::Select),
+
 			0x20 => {
-				let immediate = reader.bytes().read_varuint(32).unwrap() as u32;
+				let immediate = reader.bytes().read_varuint(32).unwrap() as usize;
 				Ok(Operation::GetLocal(immediate))
-			}
+			},
+			0x21 => {
+				let immediate = reader.bytes().read_varuint(32).unwrap() as usize;
+				Ok(Operation::SetLocal(immediate))
+			},
+			0x22 => {
+				let immediate = reader.bytes().read_varuint(32).unwrap() as usize;
+				Ok(Operation::TeeLocal(immediate))
+			},
+			0x23 => {
+				let immediate = reader.bytes().read_varuint(32).unwrap() as usize;
+				Ok(Operation::GetGlobal(immediate))
+			},
+			0x24 => {
+				let immediate = reader.bytes().read_varuint(32).unwrap() as usize;
+				Ok(Operation::SetGlobal(immediate))
+			},
+
+			0x28 => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I32Load(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x29 => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I64Load(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x2a => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::F32Load(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x2b => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::F64Load(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x2c => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I32Load8S(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x2d => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I32Load8U(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x2e => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I32Load16S(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x2f => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I32Load16U(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x30 => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I64Load8S(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x31 => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I64Load8U(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x32 => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I64Load16S(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x33 => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I64Load16U(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x34 => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I64Load32S(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x35 => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I64Load32U(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x36 => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I32Store(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x37 => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I64Store(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x38 => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::F32Store(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x39 => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::F64Store(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x3a => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I32Store8(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x3b => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I32Store16(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x3c => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I64Store8(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x3d => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I64Store16(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x3e => {
+				match MemoryImmediate::parse(reader, module) {
+					Ok(memory_immediate) => Ok(Operation::I64Store32(memory_immediate)),
+					Err(e) => Err(e)
+				}
+			},
+			0x3f => {
+				let reserved = reader.bytes().read_varuint(1).unwrap() == 1;
+				Ok(Operation::CurrentMemory(reserved))
+			},
+			0x40 => {
+				let reserved = reader.bytes().read_varuint(1).unwrap() == 1;
+				Ok(Operation::GrowMemory(reserved))
+			},
+
 			0x41 => {
 				let immediate = reader.bytes().read_varint(32).unwrap() as i32;
 				Ok(Operation::I32Const(immediate))
@@ -244,6 +418,44 @@ impl Operation {
 				let immediate = reader.read_u64::<LittleEndian>().unwrap() as f64;
 				Ok(Operation::F64Const(immediate))
 			},
+
+			0x45 => Ok(Operation::I32Eqz),
+			0x46 => Ok(Operation::I32Eq),
+			0x47 => Ok(Operation::I32Ne),
+			0x48 => Ok(Operation::I32LtS),
+			0x49 => Ok(Operation::I32LtU),
+			0x4a => Ok(Operation::I32GtS),
+			0x4b => Ok(Operation::I32GtU),
+			0x4c => Ok(Operation::I32LeS),
+			0x4d => Ok(Operation::I32LeU),
+			0x4e => Ok(Operation::I32GeS),
+			0x4f => Ok(Operation::I32GeU),
+			0x50 => Ok(Operation::I64Eqz),
+			0x51 => Ok(Operation::I64Eq),
+			0x52 => Ok(Operation::I64Ne),
+			0x53 => Ok(Operation::I64LtS),
+			0x54 => Ok(Operation::I64LtU),
+			0x55 => Ok(Operation::I64GtS),
+			0x56 => Ok(Operation::I64GtU),
+			0x57 => Ok(Operation::I64LeS),
+			0x58 => Ok(Operation::I64LeU),
+			0x59 => Ok(Operation::I64GeS),
+			0x5a => Ok(Operation::I64GeU),
+			0x5b => Ok(Operation::F32Eq),
+			0x5c => Ok(Operation::F32Ne),
+			0x5d => Ok(Operation::F32Lt),
+			0x5e => Ok(Operation::F32Gt),
+			0x5f => Ok(Operation::F32Le),
+			0x60 => Ok(Operation::F32Ge),
+			0x61 => Ok(Operation::F64Eq),
+			0x62 => Ok(Operation::F64Ne),
+			0x63 => Ok(Operation::F64Lt),
+			0x64 => Ok(Operation::F64Gt),
+			0x65 => Ok(Operation::F64Le),
+			0x66 => Ok(Operation::F64Ge),
+
+			
+
 			_ => Err(ParseError::CustomError("Unknown opcode".to_string()))
 		}
 	}
@@ -274,5 +486,13 @@ impl BranchTable {
 			targets,
 			default
 		})
+	}
+}
+
+impl MemoryImmediate {
+	pub fn parse(reader: &mut Read, module: &Module) -> Result<MemoryImmediate, ParseError> {
+		let flags = reader.bytes().read_varuint(32).unwrap() as u32;
+		let offset = reader.bytes().read_varuint(32).unwrap() as u32;
+		Ok(MemoryImmediate{flags, offset})
 	}
 }
