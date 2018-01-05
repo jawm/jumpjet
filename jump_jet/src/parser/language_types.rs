@@ -191,6 +191,8 @@ impl Operation {
 		let opcode = reader.bytes().next().unwrap().unwrap();
 		print!("{:X} ", opcode);
 		match opcode {
+
+			// Control flow operators
 			0x00 => Ok(Operation::Unreachable),
 			0x01 => Ok(Operation::Nop),
 			0x02 => match BlockType::parse(reader, module) {
@@ -217,6 +219,7 @@ impl Operation {
 			},
 			0x0f => Ok(Operation::Return),
 
+			// Call operators
 			0x10 => {
 				let function_index = reader.bytes().read_varuint(32).unwrap() as usize;
 				Ok(Operation::Call(function_index))
@@ -231,9 +234,11 @@ impl Operation {
 
 			},
 
+			// Parametric operators
 			0x1a => Ok(Operation::Drop),
 			0x1b => Ok(Operation::Select),
 
+			// Variable access
 			0x20 => {
 				let immediate = reader.bytes().read_varuint(32).unwrap() as usize;
 				Ok(Operation::GetLocal(immediate))
@@ -255,6 +260,7 @@ impl Operation {
 				Ok(Operation::SetGlobal(immediate))
 			},
 
+			// Memory-related operators
 			0x28 => {
 				match MemoryImmediate::parse(reader, module) {
 					Ok(memory_immediate) => Ok(Operation::I32Load(memory_immediate)),
@@ -402,6 +408,7 @@ impl Operation {
 				Ok(Operation::GrowMemory(reserved))
 			},
 
+			// Constants
 			0x41 => {
 				let immediate = reader.bytes().read_varint(32).unwrap() as i32;
 				Ok(Operation::I32Const(immediate))
@@ -419,6 +426,7 @@ impl Operation {
 				Ok(Operation::F64Const(immediate))
 			},
 
+			// Comparison operators
 			0x45 => Ok(Operation::I32Eqz),
 			0x46 => Ok(Operation::I32Eq),
 			0x47 => Ok(Operation::I32Ne),
@@ -454,7 +462,100 @@ impl Operation {
 			0x65 => Ok(Operation::F64Le),
 			0x66 => Ok(Operation::F64Ge),
 
-			
+			// Numeric operators
+			0x67 => Ok(Operation::I32Clz),
+			0x68 => Ok(Operation::I32Ctz),
+			0x69 => Ok(Operation::I32Popcnt),
+			0x6a => Ok(Operation::I32Add),
+			0x6b => Ok(Operation::I32Sub),
+			0x6c => Ok(Operation::I32Mul),
+			0x6d => Ok(Operation::I32DivS),
+			0x6e => Ok(Operation::I32DivU),
+			0x6f => Ok(Operation::I32RemS),
+			0x70 => Ok(Operation::I32RemU),
+			0x71 => Ok(Operation::I32And),
+			0x72 => Ok(Operation::I32Or),
+			0x73 => Ok(Operation::I32Xor),
+			0x74 => Ok(Operation::I32Shl),
+			0x75 => Ok(Operation::I32ShrS),
+			0x76 => Ok(Operation::I32ShrU),
+			0x77 => Ok(Operation::I32Rotl),
+			0x78 => Ok(Operation::I32Rotr),
+			0x79 => Ok(Operation::I64Clz),
+			0x7a => Ok(Operation::I64Ctz),
+			0x7b => Ok(Operation::I64Popcnt),
+			0x7c => Ok(Operation::I64Add),
+			0x7d => Ok(Operation::I64Sub),
+			0x7e => Ok(Operation::I64Mul),
+			0x7f => Ok(Operation::I64DivS),
+			0x80 => Ok(Operation::I64DivU),
+			0x81 => Ok(Operation::I64RemS),
+			0x82 => Ok(Operation::I64RemU),
+			0x83 => Ok(Operation::I64And),
+			0x84 => Ok(Operation::I64Or),
+			0x85 => Ok(Operation::I64Xor),
+			0x86 => Ok(Operation::I64Shl),
+			0x87 => Ok(Operation::I64ShrS),
+			0x88 => Ok(Operation::I64ShrU),
+			0x89 => Ok(Operation::I64Rotl),
+			0x8a => Ok(Operation::I64Rotr),
+			0x8b => Ok(Operation::F32Abs),
+			0x8c => Ok(Operation::F32Neg),
+			0x8d => Ok(Operation::F32Ceil),
+			0x8e => Ok(Operation::F32Floor),
+			0x8f => Ok(Operation::F32Trunc),
+			0x90 => Ok(Operation::F32Nearest),
+			0x91 => Ok(Operation::F32Sqrt),
+			0x92 => Ok(Operation::F32Add),
+			0x93 => Ok(Operation::F32Sub),
+			0x94 => Ok(Operation::F32Mul),
+			0x95 => Ok(Operation::F32Div),
+			0x96 => Ok(Operation::F32Min),
+			0x97 => Ok(Operation::F32Max),
+			0x98 => Ok(Operation::F32Copysign),
+			0x99 => Ok(Operation::F64Abs),
+			0x9a => Ok(Operation::F64Neg),
+			0x9b => Ok(Operation::F64Ceil),
+			0x9c => Ok(Operation::F64Floor),
+			0x9d => Ok(Operation::F64Trunc),
+			0x9e => Ok(Operation::F64Nearest),
+			0x9f => Ok(Operation::F64Sqrt),
+			0xa0 => Ok(Operation::F64Add),
+			0xa1 => Ok(Operation::F64Sub),
+			0xa2 => Ok(Operation::F64Mul),
+			0xa3 => Ok(Operation::F64Div),
+			0xa4 => Ok(Operation::F64Min),
+			0xa5 => Ok(Operation::F64Max),
+			0xa6 => Ok(Operation::F64Copysign),
+
+			// Conversions
+			0xa7 => Ok(Operation::I32WrapI64),
+			0xa8 => Ok(Operation::I32TruncSF32),
+			0xa9 => Ok(Operation::I32TruncUF32),
+			0xaa => Ok(Operation::I32TruncSF64),
+			0xab => Ok(Operation::I32TruncUF64),
+			0xac => Ok(Operation::I64ExtendSI32),
+			0xad => Ok(Operation::I64ExtendUI32),
+			0xae => Ok(Operation::I64TruncSF32),
+			0xaf => Ok(Operation::I64TruncUF32),
+			0xb0 => Ok(Operation::I64TruncSF64),
+			0xb1 => Ok(Operation::I64TruncUF64),
+			0xb2 => Ok(Operation::F32ConvertSI32),
+			0xb3 => Ok(Operation::F32ConvertUI32),
+			0xb4 => Ok(Operation::F32ConvertSI64),
+			0xb5 => Ok(Operation::F32ConvertUI64),
+			0xb6 => Ok(Operation::F32DemoteF64),
+			0xb7 => Ok(Operation::F64ConvertSI32),
+			0xb8 => Ok(Operation::F64ConvertUI32),
+			0xb9 => Ok(Operation::F64ConvertSI64),
+			0xba => Ok(Operation::F64ConvertUI64),
+			0xbb => Ok(Operation::F64PromoteF32),
+
+			// Reinterpretations
+			0xbc => Ok(Operation::I32ReinterpretF32),
+			0xbd => Ok(Operation::I64ReinterpretF64),
+			0xbe => Ok(Operation::F32ReinterpretI32),
+			0xbf => Ok(Operation::F64ReinterpretI64),
 
 			_ => Err(ParseError::CustomError("Unknown opcode".to_string()))
 		}
