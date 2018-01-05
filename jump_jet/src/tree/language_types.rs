@@ -259,8 +259,8 @@ pub enum Operation {
 #[derive(Clone)]
 #[derive(Debug)]
 pub struct MemoryImmediate {
-    flags: u32, // varuint32 - i have no idea what this is
-    offset: u32,
+    pub flags: u32, // varuint32 - i have no idea what this is
+    pub offset: u32,
 }
 
 #[derive(Clone)]
