@@ -5,10 +5,11 @@ use parser::leb::ReadLEB;
 use parser::ParseError;
 use parser::utils::read_string;
 
-use tree::language_types::ExternalKind;
-use tree::Module;
+use parse_tree::language_types::ExternalKind;
+use parse_tree::ParseModule;
 
-pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
+pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseError> {
+    debug!("Parsing imports section");
     let count = reader.bytes().read_varuint(32).unwrap();
     for _ in 0..count {
         let module_name = read_string(reader)?;

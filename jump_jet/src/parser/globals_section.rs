@@ -3,13 +3,14 @@ use std::io::Read;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
-use tree::globals::Global;
-use tree::language_types::GlobalType;
-use tree::language_types::InitExpression;
-use tree::language_types::ValueType;
-use tree::Module;
+use parse_tree::globals::Global;
+use parse_tree::language_types::GlobalType;
+use parse_tree::language_types::InitExpression;
+use parse_tree::language_types::ValueType;
+use parse_tree::ParseModule;
 
-pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
+pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseError> {
+    debug!("Parsing globals section");
     let count = reader.bytes().read_varuint(32).unwrap();
     for _ in 0..count {
         let constraints = GlobalType::parse(reader)?;

@@ -20,7 +20,7 @@ pub enum LanguageType {
 
 #[derive(Debug)]
 pub enum ExternalKind {
-    Function(usize), // possibly have it go into the types section, instead of storing index
+    Function(usize),
     Table(usize),
     Memory(usize),
     Global(usize),
@@ -129,7 +129,6 @@ pub enum Operation {
     I32LeU,
     I32GeS,
     I32GeU,
-
     I64Eqz,
     I64Eq,
     I64Ne,
@@ -141,14 +140,12 @@ pub enum Operation {
     I64LeU,
     I64GeS,
     I64GeU,
-
     F32Eq,
     F32Ne,
     F32Lt,
     F32Gt,
     F32Le,
     F32Ge,
-
     F64Eq,
     F64Ne,
     F64Lt,
@@ -255,7 +252,6 @@ pub enum Operation {
     F64ReinterpretI64,
 }
 
-// TODO remove this annotation boi
 #[derive(Clone)]
 #[derive(Debug)]
 pub struct MemoryImmediate {

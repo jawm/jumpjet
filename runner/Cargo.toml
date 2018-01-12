@@ -5,3 +5,5 @@ authors = ["James Morrison <jamesmorrison3@live.co.uk>"]
 
 [dependencies]
 jump_jet = { path = "../jump_jet" }
+log = "0.4.1"
+env_logger = "0.4.3"

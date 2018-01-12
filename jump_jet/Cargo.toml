@@ -6,3 +6,4 @@ authors = ["James Morrison <jamesmorrison3@live.co.uk>"]
 [dependencies]
 byteorder = "1.1.0"
 leb = { git = "https://github.com/jawm/leb" }
+log = "0.4.1"

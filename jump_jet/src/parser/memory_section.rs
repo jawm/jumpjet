@@ -3,11 +3,12 @@ use std::io::Read;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
-use tree::language_types::ResizableLimits;
-use tree::memory::Memory;
-use tree::Module;
+use parse_tree::language_types::ResizableLimits;
+use parse_tree::memory::Memory;
+use parse_tree::ParseModule;
 
-pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
+pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseError> {
+    debug!("Parsing memory section");
     let count = reader.bytes().read_varuint(32).unwrap();
     for _ in 0..count {
         let limits = ResizableLimits::parse(reader)?;

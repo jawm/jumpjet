@@ -2,8 +2,8 @@ use std::error::Error;
 
 use runtime::language_types::ValueTypeInstance;
 
-use tree::functions::Function;
-use tree::language_types::ValueType;
+use parse_tree::functions::Function;
+use parse_tree::language_types::ValueType;
 
 impl Function {
     pub fn check_arguments(&self, arguments: &Vec<ValueTypeInstance>) -> Result<(),&Error> {

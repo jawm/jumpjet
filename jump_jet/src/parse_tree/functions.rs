@@ -1,5 +1,5 @@
-use tree::language_types::Operation;
-use tree::language_types::ValueType;
+use parse_tree::language_types::Operation;
+use parse_tree::language_types::ValueType;
 
 #[derive(Clone, Debug)]
 pub struct Function {

@@ -9,7 +9,7 @@ use std::io::ErrorKind;
 use std::io::Read;
 use std::collections::HashMap;
 
-use tree::Module;
+use parse_tree::ParseModule;
 
 mod utils;
 
@@ -55,7 +55,7 @@ pub struct ModuleParser {
     sections: HashMap<
         u64,
         Box<
-            Fn(&mut Read, &mut Module) -> Result<(), ParseError>
+            Fn(&mut Read, &mut ParseModule) -> Result<(), ParseError>
         >
     >
 }
@@ -64,7 +64,7 @@ impl ModuleParser {
 
     pub fn default() -> ModuleParser {
 
-        let mut sections: HashMap<u64, Box<Fn(&mut Read, &mut Module) -> Result<(), ParseError>>> = HashMap::new();
+        let mut sections: HashMap<u64, Box<Fn(&mut Read, &mut ParseModule) -> Result<(), ParseError>>> = HashMap::new();
         sections.insert(1,  Box::new(types_section::parse));
         sections.insert(2,  Box::new(imports_section::parse));
         sections.insert(3,  Box::new(functions_section::parse));
@@ -80,7 +80,7 @@ impl ModuleParser {
         ModuleParser{sections}
     }
 
-    pub fn parse_module<T: Read>(&self, mut reader: T) -> Result<Module,ParseError> {
+    pub fn parse_module<T: Read>(&self, mut reader: T) -> Result<ParseModule,ParseError> {
         let magic_number = reader.read_u32::<LittleEndian>()?;
         if magic_number != MAGIC_NUMBER {
             return Err(ParseError::WrongMagicNumber)
@@ -89,7 +89,7 @@ impl ModuleParser {
         if version != 1 {
             return Err(ParseError::UnsupportedModuleVersion)
         } else {
-            let mut module = Module {
+            let mut module = ParseModule {
                 version,
                 types: vec![],
                 imports: HashMap::new(),
@@ -101,12 +101,12 @@ impl ModuleParser {
                 start_function: None,
             };
             self.parse_sections(&mut module, &mut reader)?;
-            println!("parsed module {:#?}", module);
+            debug!("parsed module {:#?}", module);
             return Ok(module)
         }
     }
 
-    fn parse_sections<T: Read>(&self, module: &mut Module, reader: &mut T) -> Result<(), ParseError> {
+    fn parse_sections<T: Read>(&self, module: &mut ParseModule, reader: &mut T) -> Result<(), ParseError> {
 
         loop {
             let id = match reader.bytes().read_varuint(7) {
@@ -118,22 +118,22 @@ impl ModuleParser {
                     panic!("{:?}", e);
                 }
             };
-            println!("parsing section {}", id);
+            debug!("parsing section {}", id);
             match self.parse_section(id, reader, module) {
                 Err(error) => {
-                    println!("Failure parsing section {}", id);
+                    error!("Failure parsing section {}", id);
                     return Err(error)
                 },
                 _ => {}
             };
-            println!("Section parsed {}", id);
+            debug!("Section parsed {}", id);
         }
-        println!("Module parsing complete");
+        debug!("Module parsing complete");
         Ok(())
 
     }
 
-    fn parse_section<T: Read>(&self, id: u64, reader: &mut T, module: &mut Module) -> Result<(), ParseError> {
+    fn parse_section<T: Read>(&self, id: u64, reader: &mut T, module: &mut ParseModule) -> Result<(), ParseError> {
         let parser_function = match self.sections.get(&id) {
             Some(func) => func,
             None => return Err(ParseError::UnknownSectionId(id))

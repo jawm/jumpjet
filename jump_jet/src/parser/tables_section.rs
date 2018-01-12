@@ -3,12 +3,13 @@ use std::io::Read;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
-use tree::language_types::LanguageType;
-use tree::language_types::TableType;
-use tree::Module;
-use tree::tables::Table;
+use parse_tree::language_types::LanguageType;
+use parse_tree::language_types::TableType;
+use parse_tree::ParseModule;
+use parse_tree::tables::Table;
 
-pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
+pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseError> {
+    debug!("Parsing tables section");
     let count = reader.bytes().read_varuint(32).unwrap();
     for _ in 0..count {
         let constraints = TableType::parse(reader)?;

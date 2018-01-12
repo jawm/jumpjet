@@ -3,12 +3,13 @@ use std::io::Read;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
-use tree::language_types::Operation;
-use tree::language_types::ValueType;
-use tree::Module;
+use parse_tree::language_types::Operation;
+use parse_tree::language_types::ValueType;
+use parse_tree::ParseModule;
 
 // TODO finish implementing.
-pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
+pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseError> {
+    debug!("Parsing code section");
     let count = reader.bytes().read_varuint(32).unwrap();
     for index in 0..count {
         let _body_size = reader.bytes().read_varuint(32).unwrap();

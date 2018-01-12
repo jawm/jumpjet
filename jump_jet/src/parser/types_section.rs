@@ -3,15 +3,16 @@ use std::io::Read;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
-use tree::language_types::LanguageType;
-use tree::language_types::ValueType;
-use tree::Module;
+use parse_tree::language_types::LanguageType;
+use parse_tree::language_types::ValueType;
+use parse_tree::ParseModule;
 
-use tree::types::TypeDefinition;
+use parse_tree::types::TypeDefinition;
 
-use tree::functions::FuncSignature;
+use parse_tree::functions::FuncSignature;
 
-pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
+pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseError> {
+    debug!("Parsing types section");
     let bytes = &mut reader.bytes();
     let count = bytes.read_varuint(32).unwrap();
     for _ in 0..count {

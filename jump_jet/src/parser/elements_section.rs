@@ -3,11 +3,12 @@ use std::io::Read;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
-use tree::language_types::InitExpression;
-use tree::Module;
-use tree::tables::Table;
+use parse_tree::language_types::InitExpression;
+use parse_tree::ParseModule;
+use parse_tree::tables::Table;
 
-pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
+pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseError> {
+    debug!("Parsing elements section");
     let count = reader.bytes().read_varuint(32).unwrap();
     for _ in 0..count {
         let index = reader.bytes().read_varuint(32).unwrap() as usize;

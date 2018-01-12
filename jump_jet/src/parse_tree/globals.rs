@@ -1,5 +1,5 @@
-use tree::language_types::GlobalType;
-use tree::language_types::InitExpression;
+use parse_tree::language_types::GlobalType;
+use parse_tree::language_types::InitExpression;
 
 #[derive(Debug)]
 pub struct Global {

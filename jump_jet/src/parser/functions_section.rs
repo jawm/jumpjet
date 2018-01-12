@@ -3,12 +3,13 @@ use std::io::Read;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
-use tree::functions::Function;
-use tree::functions::FuncBody;
-use tree::Module;
-use tree::types::TypeDefinition;
+use parse_tree::functions::Function;
+use parse_tree::functions::FuncBody;
+use parse_tree::ParseModule;
+use parse_tree::types::TypeDefinition;
 
-pub fn parse(reader: &mut Read, module: &mut Module) -> Result<(), ParseError> {
+pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseError> {
+    debug!("Parsing functions section");
     let mut bytes = reader.bytes();
     let count = bytes.read_varuint(32).unwrap();
 

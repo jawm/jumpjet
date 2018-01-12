@@ -4,12 +4,12 @@ use std::fmt::Debug;
 
 use runtime::language_types::ValueTypeInstance;
 
-use tree::language_types::ExternalKind;
-use tree::language_types::ValueType;
-use tree::Module;
+use parse_tree::language_types::ExternalKind;
+use parse_tree::language_types::ValueType;
+use parse_tree::ParseModule;
 
 pub trait GetExport {
-    fn get_function<'func>(&'func self, export_name: &str, module: &'func Module) -> Result<Box<(Fn(Vec<ValueTypeInstance>) -> Result<Vec<ValueTypeInstance>,&'func Error>) + 'func>, &Error>;
+    fn get_function<'func>(&'func self, export_name: &str, module: &'func ParseModule) -> Result<Box<(Fn(Vec<ValueTypeInstance>) -> Result<Vec<ValueTypeInstance>,&'func Error>) + 'func>, &Error>;
 }
 
 pub trait ValueTypeProvider : Debug {
@@ -37,12 +37,11 @@ impl ValueTypeProvider for f64 {
 }
 
 impl GetExport for HashMap<String, ExternalKind> {
-    fn get_function<'func>(&'func self, export_name: &str, module: &'func Module) -> Result<Box<(Fn(Vec<ValueTypeInstance>) -> Result<Vec<ValueTypeInstance>,&'func Error>) + 'func>, &Error> {
+    fn get_function<'func>(&'func self, export_name: &str, module: &'func ParseModule) -> Result<Box<(Fn(Vec<ValueTypeInstance>) -> Result<Vec<ValueTypeInstance>,&'func Error>) + 'func>, &Error> {
         if let Some(&ExternalKind::Function(index)) = self.get(export_name){
             let func = &module.functions[index];
             Ok(Box::new(move |arguments|{
                 if let Ok(_) = func.check_arguments(&arguments) {
-                    println!("{:?}",func);
                     func.execute(arguments)
                 } else {
                     panic!("don't have proper error handling yet ayy");

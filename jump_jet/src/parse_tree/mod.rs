@@ -8,7 +8,7 @@ pub mod tables;
 pub mod globals;
 
 #[derive(Debug)]
-pub struct Module {
+pub struct ParseModule {
     pub version: u32,
     pub types: Vec<types::TypeDefinition>,
     pub imports: HashMap<String, HashMap<String, language_types::ExternalKind>>,

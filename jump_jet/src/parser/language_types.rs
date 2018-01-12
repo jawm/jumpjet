@@ -6,18 +6,18 @@ use parser::byteorder::ReadBytesExt;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
-use tree::language_types::BlockType;
-use tree::language_types::BranchTable;
-use tree::language_types::ExternalKind;
-use tree::language_types::GlobalType;
-use tree::language_types::InitExpression;
-use tree::language_types::LanguageType;
-use tree::language_types::MemoryImmediate;
-use tree::language_types::Operation;
-use tree::language_types::ResizableLimits;
-use tree::language_types::TableType;
-use tree::language_types::ValueType;
-use tree::Module;
+use parse_tree::language_types::BlockType;
+use parse_tree::language_types::BranchTable;
+use parse_tree::language_types::ExternalKind;
+use parse_tree::language_types::GlobalType;
+use parse_tree::language_types::InitExpression;
+use parse_tree::language_types::LanguageType;
+use parse_tree::language_types::MemoryImmediate;
+use parse_tree::language_types::Operation;
+use parse_tree::language_types::ResizableLimits;
+use parse_tree::language_types::TableType;
+use parse_tree::language_types::ValueType;
+use parse_tree::ParseModule;
 
 impl ValueType {
 	pub fn parse<R: Read>(bytes: &mut Bytes<R>) -> Result<ValueType, ParseError> {
@@ -113,7 +113,7 @@ impl TableType {
 }
 
 impl InitExpression {
-	pub fn parse(reader: &mut Read, module: &Module) -> Result<InitExpression, ParseError> {
+	pub fn parse(reader: &mut Read, module: &ParseModule) -> Result<InitExpression, ParseError> {
 		let byte = reader.bytes().next().unwrap().unwrap();
 		match byte {
 			0x41 => {
@@ -169,7 +169,7 @@ impl InitExpression {
 }
 
 impl Operation {
-	pub fn parse_multiple(reader: &mut Read, module: &Module) -> Result<Vec<Operation>, ParseError> {
+	pub fn parse_multiple(reader: &mut Read, module: &ParseModule) -> Result<Vec<Operation>, ParseError> {
 		let mut ops = vec![];
 		loop {
 			match Operation::parse(reader, module) {
@@ -183,13 +183,11 @@ impl Operation {
 				Err(e) => {return Err(e);}
 			}
 		}
-		println!("/break");
 		Ok(ops)
 	}
 
-	pub fn parse(reader: &mut Read, module: &Module) -> Result<Operation, ParseError> {
+	pub fn parse(reader: &mut Read, module: &ParseModule) -> Result<Operation, ParseError> {
 		let opcode = reader.bytes().next().unwrap().unwrap();
-		print!("{:X} ", opcode);
 		match opcode {
 
 			// Control flow operators
@@ -563,7 +561,7 @@ impl Operation {
 }
 
 impl BlockType {
-	pub fn parse(reader: &mut Read, module: &Module) -> Result<BlockType, ParseError> {
+	pub fn parse(reader: &mut Read, module: &ParseModule) -> Result<BlockType, ParseError> {
 		let byte = reader.bytes().read_varint(7).unwrap();
 		if let Ok(value_type) = ValueType::get(byte) {
 			Ok(BlockType::Value(value_type))
@@ -576,7 +574,7 @@ impl BlockType {
 }
 
 impl BranchTable {
-	pub fn parse(reader: &mut Read, module: &Module) -> Result<BranchTable, ParseError> {
+	pub fn parse(reader: &mut Read, module: &ParseModule) -> Result<BranchTable, ParseError> {
 		let target_count = reader.bytes().read_varuint(32).unwrap() as u32;
 		let mut targets = vec![];
 		for _ in 0..target_count {
@@ -591,7 +589,7 @@ impl BranchTable {
 }
 
 impl MemoryImmediate {
-	pub fn parse(reader: &mut Read, module: &Module) -> Result<MemoryImmediate, ParseError> {
+	pub fn parse(reader: &mut Read, module: &ParseModule) -> Result<MemoryImmediate, ParseError> {
 		let flags = reader.bytes().read_varuint(32).unwrap() as u32;
 		let offset = reader.bytes().read_varuint(32).unwrap() as u32;
 		Ok(MemoryImmediate{flags, offset})

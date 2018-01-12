@@ -1,4 +1,4 @@
-use tree::language_types::ResizableLimits;
+use parse_tree::language_types::ResizableLimits;
 
 #[derive(Debug)]
 pub struct Memory {
