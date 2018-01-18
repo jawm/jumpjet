@@ -9,31 +9,29 @@ use parse_tree::types::TypeDefinition;
 
 use parser::ParseError;
 
-use runtime::language_types::ValueTypeInstance;
+mod exports;
+use runtime_tree::exports::ExportObj;
+pub use runtime_tree::exports::ExportObject;
+
+mod globals;
+use runtime_tree::globals::Global;
+
+mod language_types;
+pub use runtime_tree::language_types::ExternalKindInstance;
+pub use runtime_tree::language_types::ValueTypeProvider;
+
+mod memory;
+use runtime_tree::memory::Memory;
 
 pub struct RuntimeModule {
-    //pub version: u32,
-    pub types: Vec<TypeDefinition>,
-    //pub imports: HashMap<String, HashMap<String, ExternalKind>>,
-    pub functions: Vec<Box<Fn(&RuntimeModule, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>>,
-    pub tables: Vec<Table>,
-    pub memories: Vec<Memory>,
-    pub globals: Vec<Global>,
-    pub exports: HashMap<String, ExternalKindInstance>,
-    pub start_function: Option<usize>,
+    types: Vec<TypeDefinition>,
+    functions: Vec<Box<Fn(&RuntimeModule, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>>,
+    tables: Vec<Table>,
+    memories: Vec<Memory>,
+    globals: Vec<Global>,
+    exports: HashMap<String, ExternalKindInstance>,
+    start_function: Option<usize>,
 }
-
-pub enum ExternalKindInstance {
-    Function(usize),
-    Table(usize),
-    Memory(usize),
-    Global(usize),
-}
-//pub enum Table {
-//    AnyFunc(Vec<Box<Fn(&RuntimeModule, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>>)
-//}
-pub struct Memory {}
-pub enum Global {}
 
 pub trait RuntimeModuleBuilder {
     fn build(&self, imports: HashMap<String, HashMap<String, ExternalKindInstance>>) -> Result<RuntimeModule, ParseError>;
@@ -50,6 +48,7 @@ impl RuntimeModuleBuilder for ParseModule {
             exports: HashMap::new(),
             start_function: None
         };
+        m.build_imports(&self, imports);
         m.build_functions(&self);
         m.build_exports(&self);
         m.build_tables(&self);
@@ -57,24 +56,26 @@ impl RuntimeModuleBuilder for ParseModule {
     }
 }
 
-struct ExportObj<'m> {module: &'m RuntimeModule}
-pub trait ExportObject {
-    fn call_fn(&self, name: &str, args: Vec<ValueTypeProvider>) -> Vec<ValueTypeProvider>;
-}
-impl<'m> ExportObject for ExportObj<'m> {
-    fn call_fn(&self, name: &str, args: Vec<ValueTypeProvider>) -> Vec<ValueTypeProvider> {
-        let export = self.module.exports.get(name).unwrap();
-        if let ExternalKindInstance::Function(i) = *export {
-            return self.module.functions.get(i).unwrap()(self.module, args);
-        } else {
-            panic!("export wasn't a function");
-        }
-    }
-}
-
 impl RuntimeModule {
     pub fn exports<'m>(&'m self) -> Box<ExportObject + 'm> {
         Box::new(ExportObj{module: &self})
+    }
+
+    fn build_imports(&mut self, parse_module: &ParseModule, mut imports: HashMap<String, HashMap<String, ExternalKindInstance>>) {
+        for (namespace, values) in &(parse_module.imports) {
+            for (name, value) in values {
+                match *value {
+                    ExternalKind::Function(i) => {
+                        if let ExternalKindInstance::Function(x) = imports.get_mut(namespace).unwrap().remove(name).unwrap() {
+                            self.functions.insert(i, x);
+                        } else {
+                            panic!("wrong type of import provided");
+                        }
+                    },
+                    _ => panic!("not impl")
+                }
+            }
+        }
     }
 
     fn build_tables(&mut self, parse_module: &ParseModule) {
@@ -84,8 +85,6 @@ impl RuntimeModule {
     }
 
     fn build_functions(&mut self, parse_module: &ParseModule) {
-        let mut functions: Vec<Box<Fn(&RuntimeModule, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>> = vec![];
-
         for f in parse_module.function_signatures.iter().zip(&parse_module.function_bodies) {
             let &TypeDefinition::Func(ref signature) = &parse_module.types[*f.0];
             let body = f.1;
@@ -99,7 +98,7 @@ impl RuntimeModule {
 
             let operations = body.code.clone();
 
-            functions.push(Box::new(move |module, args|{
+            self.functions.push(Box::new(move |module, args|{
                 if args.len() != args_size {
                     panic!("Wrong number of args provided");
                 }
@@ -215,44 +214,18 @@ impl RuntimeModule {
                 vec![stack.pop().unwrap()]
             }));
         }
-        self.functions = functions;
     }
 
     fn build_exports(&mut self, parse_module: &ParseModule) {
         for (key, value) in parse_module.exports.iter() {
             match *value {
-                ExternalKind::Function(i) => self.exports.insert(key.clone(), ExternalKindInstance::Function(i)),
+                ExternalKind::Function(i) => {
+                    self.exports.insert(key.clone(), ExternalKindInstance::Function(Box::new(move |module, args| {
+                        return module.functions[i](module, args);
+                    })))
+                },
                 _ => panic!("not suppeasdf")
             };
         }
     }
-}
-
-impl ExternalKindInstance {
-    pub fn call_function(export_name: &str) -> Box<Fn(Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>> {
-        panic!("")
-    }
-}
-
-
-pub trait I32Provider {
-    fn get_value(&self) -> i32;
-}
-
-impl I32Provider for i32 {
-    fn get_value(&self) -> i32 {
-        *self
-    }
-}
-
-trait Provider {
-
-}
-
-#[derive(Debug, Clone)]
-pub enum ValueTypeProvider {
-    I32(i32),
-    I64(i64),
-    F32(f32),
-    F64(f64),
 }

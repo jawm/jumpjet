@@ -1,6 +1,5 @@
 use std::io::Read;
 
-use parse_tree::ParseModule;
 use std::collections::HashMap;
 
 use parser::ModuleParser;
