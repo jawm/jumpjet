@@ -4,6 +4,8 @@ use parse_tree::language_types::ExternalKind;
 use parse_tree::language_types::Operation;
 use parse_tree::language_types::ValueType;
 use parse_tree::ParseModule;
+use parse_tree::tables::Table;
+use parse_tree::types::TypeDefinition;
 
 use parser::ParseError;
 
@@ -11,9 +13,9 @@ use runtime::language_types::ValueTypeInstance;
 
 pub struct RuntimeModule {
     //pub version: u32,
-    //pub types: Vec<types::TypeDefinition>,
+    pub types: Vec<TypeDefinition>,
     //pub imports: HashMap<String, HashMap<String, ExternalKind>>,
-    pub functions: Vec<Box<Fn(Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>>,
+    pub functions: Vec<Box<Fn(&RuntimeModule, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>>,
     pub tables: Vec<Table>,
     pub memories: Vec<Memory>,
     pub globals: Vec<Global>,
@@ -27,7 +29,9 @@ pub enum ExternalKindInstance {
     Memory(usize),
     Global(usize),
 }
-pub enum Table {}
+//pub enum Table {
+//    AnyFunc(Vec<Box<Fn(&RuntimeModule, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>>)
+//}
 pub struct Memory {}
 pub enum Global {}
 
@@ -38,6 +42,7 @@ pub trait RuntimeModuleBuilder {
 impl RuntimeModuleBuilder for ParseModule {
     fn build(&self, imports: HashMap<String, HashMap<String, ExternalKindInstance>>) -> Result<RuntimeModule, ParseError> {
         let mut m = RuntimeModule {
+            types: self.types.clone(),
             functions: vec![],
             tables: vec![],
             memories: vec![],
@@ -47,6 +52,7 @@ impl RuntimeModuleBuilder for ParseModule {
         };
         m.build_functions(&self);
         m.build_exports(&self);
+        m.build_tables(&self);
         Ok(m)
     }
 }
@@ -59,7 +65,7 @@ impl<'m> ExportObject for ExportObj<'m> {
     fn call_fn(&self, name: &str, args: Vec<ValueTypeProvider>) -> Vec<ValueTypeProvider> {
         let export = self.module.exports.get(name).unwrap();
         if let ExternalKindInstance::Function(i) = *export {
-            return self.module.functions.get(i).unwrap()(args);
+            return self.module.functions.get(i).unwrap()(self.module, args);
         } else {
             panic!("export wasn't a function");
         }
@@ -71,22 +77,29 @@ impl RuntimeModule {
         Box::new(ExportObj{module: &self})
     }
 
+    fn build_tables(&mut self, parse_module: &ParseModule) {
+        for parse_table in &(parse_module.tables) {
+            self.tables.push((*parse_table).clone());
+        }
+    }
+
     fn build_functions(&mut self, parse_module: &ParseModule) {
-        let mut functions: Vec<Box<Fn(Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>> = vec![];
+        let mut functions: Vec<Box<Fn(&RuntimeModule, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>> = vec![];
 
-        for f in &(parse_module.functions) {
-
-            let args_size = f.signature.parameters.len();
-            let locals_size = f.body.locals.len();
+        for f in parse_module.function_signatures.iter().zip(&parse_module.function_bodies) {
+            let &TypeDefinition::Func(ref signature) = &parse_module.types[*f.0];
+            let body = f.1;
+            let args_size = signature.parameters.len();
+            let locals_size = body.locals.len();
             let local_space_size = args_size + locals_size;
 
             let mut locals = Vec::with_capacity(local_space_size);
-            locals.append(&mut f.signature.parameters.clone());
-            locals.append(&mut f.body.locals.clone());
+            locals.append(&mut signature.parameters.clone());
+            locals.append(&mut body.locals.clone());
 
-            let operations = f.body.code.clone();
+            let operations = body.code.clone();
 
-            functions.push(Box::new(move |args|{
+            functions.push(Box::new(move |module, args|{
                 if args.len() != args_size {
                     panic!("Wrong number of args provided");
                 }
@@ -140,15 +153,66 @@ impl RuntimeModule {
                             stack.push(local_space[idx].clone());
                         },
                         Operation::CallIndirect(idx, _) => {
-//                            for vtp in self.functions[idx](vec![]) {
-//                                stack.push(vtp);
-//                            }
+                            let &TypeDefinition::Func(ref signature) = &(module.types)[idx];
+                            let mut args = vec![];
+                            for param in &(signature.parameters) {
+                                match *param {
+                                    ValueType::I32 => {
+                                        if let Some(ValueTypeProvider::I32(v)) = stack.pop() {
+                                            args.push(ValueTypeProvider::I32(v));
+                                        } else {
+                                            panic!("wrong argument type");
+                                        }
+                                    },
+                                    ValueType::I64 => {
+                                        if let Some(ValueTypeProvider::I64(v)) = stack.pop() {
+                                            args.push(ValueTypeProvider::I64(v));
+                                        } else {
+                                            panic!("wrong argument type");
+                                        }
+                                    },
+                                    ValueType::F32 => {
+                                        if let Some(ValueTypeProvider::F32(v)) = stack.pop() {
+                                            args.push(ValueTypeProvider::F32(v));
+                                        } else {
+                                            panic!("wrong argument type");
+                                        }
+                                    },
+                                    ValueType::F64 => {
+                                        if let Some(ValueTypeProvider::F64(v)) = stack.pop() {
+                                            args.push(ValueTypeProvider::F64(v));
+                                        } else {
+                                            panic!("wrong argument type");
+                                        }
+                                    },
+                                }
+                            }
+                            if let Some(ValueTypeProvider::I32(index)) = stack.pop() {
+
+                                println!("{:?}", index);
+
+                                let &Table::AnyFunc{ref limits, ref values} = &(module.tables)[0];
+                                let fn_index = values.get(index as usize).unwrap();
+                                let callable = module.functions.get(*fn_index).unwrap();
+                                for vtp in callable(module, args) {
+                                    stack.push(vtp);
+                                }
+                            } else {
+                                panic!("function not found or not indexed by i32");
+                            }
+                        },
+                        Operation::I32Const(value) => {
+                            stack.push(ValueTypeProvider::I32(value));
+                        },
+                        Operation::End => {
+                            break
                         },
                         _ => panic!("not supported yet")
                     }
+                    println!("stack after: {:?}", stack);
                 }
-
-                vec![]
+                println!("returning: {:#?}", stack);
+                vec![stack.pop().unwrap()]
             }));
         }
         self.functions = functions;
@@ -185,7 +249,7 @@ trait Provider {
 
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum ValueTypeProvider {
     I32(i32),
     I64(i64),

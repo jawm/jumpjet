@@ -38,18 +38,19 @@ impl ValueTypeProvider for f64 {
 
 impl GetExport for HashMap<String, ExternalKind> {
     fn get_function<'func>(&'func self, export_name: &str, module: &'func ParseModule) -> Result<Box<(Fn(Vec<ValueTypeInstance>) -> Result<Vec<ValueTypeInstance>,&'func Error>) + 'func>, &Error> {
-        if let Some(&ExternalKind::Function(index)) = self.get(export_name){
-            let func = &module.functions[index];
-            Ok(Box::new(move |arguments|{
-                if let Ok(_) = func.check_arguments(&arguments) {
-                    func.execute(arguments)
-                } else {
-                    panic!("don't have proper error handling yet ayy");
-                }
-            }))
-        } else {
-            panic!("something");
-        }
+//        if let Some(&ExternalKind::Function(index)) = self.get(export_name){
+//            let func = &module.functions[index];
+//            Ok(Box::new(move |arguments|{
+//                if let Ok(_) = func.check_arguments(&arguments) {
+//                    func.execute(arguments)
+//                } else {
+//                    panic!("don't have proper error handling yet ayy");
+//                }
+//            }))
+//        } else {
+//            panic!("something");
+//        }
+        unimplemented!();
     }
 }
 

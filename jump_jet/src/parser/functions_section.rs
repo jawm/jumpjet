@@ -16,10 +16,7 @@ pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseErr
     for _ in 0..count {
         let index = bytes.read_varuint(32).unwrap();
         if let Some(&TypeDefinition::Func(ref signature)) = module.types.get(index as usize) {
-            module.functions.push(Function {
-                signature: signature.clone(),
-                body: FuncBody::new()
-            });
+            module.function_signatures.push(index as usize);
         } else {
             return Err(ParseError::CustomError("The type doesn't exist or isn't a function signature".to_string()));
         }

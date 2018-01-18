@@ -12,5 +12,6 @@ fn main() {
     println!("Testing JumpJet");
     env_logger::init().unwrap();
     let module = jump_jet::instantiate(&mut File::open("program.wasm").unwrap(), HashMap::new()).unwrap();
-    module.exports().call_fn("callByIndex", vec![ValueTypeProvider::I32(0)]);
+    let rets = module.exports().call_fn("callByIndex", vec![ValueTypeProvider::I32(1)]);
+    println!("rets {:#?}", rets);
 }

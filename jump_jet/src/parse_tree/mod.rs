@@ -12,10 +12,11 @@ pub struct ParseModule {
     pub version: u32,
     pub types: Vec<types::TypeDefinition>,
     pub imports: HashMap<String, HashMap<String, language_types::ExternalKind>>,
-    pub functions: Vec<functions::Function>,
+    pub function_signatures: Vec<usize>,
+    pub function_bodies: Vec<functions::FuncBody>,
     pub tables: Vec<tables::Table>,
     pub memories: Vec<memory::Memory>,
     pub globals: Vec<globals::Global>,
     pub exports: HashMap<String, language_types::ExternalKind>,
-    pub start_function: Option<functions::Function>,
+    pub start_function: Option<usize>,
 }

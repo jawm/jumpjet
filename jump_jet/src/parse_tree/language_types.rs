@@ -32,7 +32,7 @@ pub struct TableType {
     pub limits: ResizableLimits,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ResizableLimits {
     pub initial: u64,
     pub maximum: Option<u64>,

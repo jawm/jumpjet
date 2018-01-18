@@ -3,6 +3,7 @@ use std::io::Read;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
+use parse_tree::functions::FuncBody;
 use parse_tree::language_types::Operation;
 use parse_tree::language_types::ValueType;
 use parse_tree::ParseModule;
@@ -23,8 +24,7 @@ pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseErr
         }
         match Operation::parse_multiple(reader, module) {
             Ok(code) => {
-                module.functions[index as usize].body.locals = locals;
-                module.functions[index as usize].body.code = code;
+                module.function_bodies.push(FuncBody{locals, code});
             },
             Err(e) => {return Err(e)},
         }
