@@ -46,12 +46,17 @@ impl RuntimeModuleBuilder for ParseModule {
             memories: vec![],
             globals: vec![],
             exports: HashMap::new(),
-            start_function: None
+            start_function: self.start_function
         };
         m.build_imports(&self, imports);
         m.build_functions(&self);
         m.build_exports(&self);
         m.build_tables(&self);
+
+        if let Some(index) = m.start_function {
+            let start_fn = m.functions.get(index).unwrap();
+            start_fn(&m, vec![]);
+        }
         Ok(m)
     }
 }
@@ -97,6 +102,8 @@ impl RuntimeModule {
             locals.append(&mut body.locals.clone());
 
             let operations = body.code.clone();
+
+            let rets = signature.returns.clone();
 
             self.functions.push(Box::new(move |module, args|{
                 if args.len() != args_size {
@@ -148,6 +155,11 @@ impl RuntimeModule {
                 for operation in &(operations) {
                     println!("operation {:?}", operation);
                     match *operation {
+                        Operation::Unreachable => panic!("Unreachable code executed"),
+                        Operation::Nop => {},
+                        Operation::Block(ref b) => {
+                            // TODO maybe do stuff recursively here, because I'm lazy af
+                        },
                         Operation::GetLocal(idx) => {
                             stack.push(local_space[idx].clone());
                         },
@@ -211,7 +223,33 @@ impl RuntimeModule {
                     println!("stack after: {:?}", stack);
                 }
                 println!("returning: {:#?}", stack);
-                vec![stack.pop().unwrap()]
+                let mut results = vec![];
+                for ret in &rets {
+                    match *ret {
+                        ValueType::I32 => {
+                            if let Some(ValueTypeProvider::I32(i)) = stack.pop() {
+                                results.push(ValueTypeProvider::I32(i));
+                            }
+                        },
+                        ValueType::I64 => {
+                            if let Some(ValueTypeProvider::I64(i)) = stack.pop() {
+                                results.push(ValueTypeProvider::I64(i));
+                            }
+                        },
+                        ValueType::F32 => {
+                            if let Some(ValueTypeProvider::F32(i)) = stack.pop() {
+                                results.push(ValueTypeProvider::F32(i));
+                            }
+                        },
+                        ValueType::F64 => {
+                            if let Some(ValueTypeProvider::F64(i)) = stack.pop() {
+                                results.push(ValueTypeProvider::F64(i));
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+                return results;
             }));
         }
     }
