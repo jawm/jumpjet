@@ -81,6 +81,7 @@ impl ModuleParser {
     }
 
     pub fn parse_module<T: Read>(&self, mut reader: T) -> Result<ParseModule,ParseError> {
+        info!("Beginning parsing");
         let magic_number = reader.read_u32::<LittleEndian>()?;
         if magic_number != MAGIC_NUMBER {
             return Err(ParseError::WrongMagicNumber)
@@ -102,7 +103,8 @@ impl ModuleParser {
                 start_function: None,
             };
             self.parse_sections(&mut module, &mut reader)?;
-            debug!("parsed module {:#?}", module);
+            info!("parsed module");
+            debug!("module structure {:#?}", module);
             return Ok(module)
         }
     }
@@ -119,7 +121,7 @@ impl ModuleParser {
                     panic!("{:?}", e);
                 }
             };
-            debug!("parsing section {}", id);
+            info!("parsing section {}", id);
             match self.parse_section(id, reader, module) {
                 Err(error) => {
                     error!("Failure parsing section {}", id);
@@ -127,7 +129,7 @@ impl ModuleParser {
                 },
                 _ => {}
             };
-            debug!("Section parsed {}", id);
+            info!("Section parsed {}", id);
         }
         debug!("Module parsing complete");
         Ok(())

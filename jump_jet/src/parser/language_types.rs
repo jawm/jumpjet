@@ -71,6 +71,7 @@ impl ExternalKind {
 
 impl ResizableLimits {
 	pub fn parse(reader: &mut Read) -> Result<ResizableLimits, ParseError> {
+		println!("attempting");
 		let flags = reader.bytes().read_varuint(1).unwrap();
 		let initial = reader.bytes().read_varuint(32).unwrap();
         let maximum = if flags == 1 {
@@ -171,14 +172,20 @@ impl InitExpression {
 impl Operation {
 	pub fn parse_multiple(reader: &mut Read, module: &ParseModule) -> Result<Vec<Operation>, ParseError> {
 		let mut ops = vec![];
+		let mut ends_required = 1;
 		loop {
 			match Operation::parse(reader, module) {
 				Ok(operation) => {
-					if let Operation::End = operation {
-						ops.push(operation);
+					match operation {
+						Operation::End => ends_required -= 1,
+						Operation::Block(_) | Operation::Loop(_) | Operation::If(_) => ends_required += 1,
+						_ => {}
+					}
+					println!("op {:?}", operation);
+					ops.push(operation);
+					if ends_required == 0 {
 						break;
 					}
-					ops.push(operation);
 				},
 				Err(e) => {return Err(e);}
 			}
@@ -187,7 +194,9 @@ impl Operation {
 	}
 
 	pub fn parse(reader: &mut Read, module: &ParseModule) -> Result<Operation, ParseError> {
+		print!("opcode ");
 		let opcode = reader.bytes().next().unwrap().unwrap();
+		println!("{:?}", opcode);
 		match opcode {
 
 			// Control flow operators
@@ -565,7 +574,7 @@ impl BlockType {
 		let byte = reader.bytes().read_varint(7).unwrap();
 		if let Ok(value_type) = ValueType::get(byte) {
 			Ok(BlockType::Value(value_type))
-		} else if byte as u8 == 0x40 {
+		} else if byte == -0x40 {
 			Ok(BlockType::Empty)
 		} else {
 			Err(ParseError::CustomError("Block type wasn't valid".to_string()))

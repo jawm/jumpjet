@@ -13,10 +13,8 @@ pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseErr
     for _ in 0..count {
         let limits = ResizableLimits::parse(reader)?;
         let capacity = limits.maximum.unwrap_or(limits.initial) as usize;
-        module.memories.push(Memory{
-            limits,
-            values: Vec::with_capacity(capacity)
-        });
+        let values = vec![0;capacity];
+        module.memories.push(Memory{limits, values});
     }
     Ok(())
 }

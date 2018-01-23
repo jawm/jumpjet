@@ -11,11 +11,13 @@ use parse_tree::ParseModule;
 // TODO finish implementing.
 pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseError> {
     debug!("Parsing code section");
+    let mut s = "".to_string();
     let count = reader.bytes().read_varuint(32).unwrap();
     for index in 0..count {
         let _body_size = reader.bytes().read_varuint(32).unwrap();
         let local_count = reader.bytes().read_varuint(32).unwrap();
         let mut locals = vec![];
+        debug!("about to parse locals");
         for _ in 0..local_count {
             let local_quantity = reader.bytes().read_varuint(32).unwrap() as usize;
             let local_type = ValueType::parse(&mut reader.bytes())?;
@@ -28,6 +30,7 @@ pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseErr
             },
             Err(e) => {return Err(e)},
         }
+        debug!("ops parsed");
     }
     Ok(())
 }

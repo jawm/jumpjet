@@ -260,7 +260,11 @@ impl RuntimeModule {
                 ExternalKind::Function(i) => {
                     self.exports.insert(key.clone(), ExternalKindInstance::Function(Box::new(move |module, args| {
                         return module.functions[i](module, args);
-                    })))
+                    })));
+                },
+                ExternalKind::Memory(i) => {
+                    //todo figure out how to properly export memories... this was just a hack to test more programs.
+                    self.exports.insert(key.clone(), ExternalKindInstance::Memory(i));
                 },
                 _ => panic!("not suppeasdf")
             };
