@@ -181,7 +181,6 @@ impl Operation {
 						Operation::Block(_) | Operation::Loop(_) | Operation::If(_) => ends_required += 1,
 						_ => {}
 					}
-					println!("op {:?}", operation);
 					ops.push(operation);
 					if ends_required == 0 {
 						break;
@@ -194,9 +193,7 @@ impl Operation {
 	}
 
 	pub fn parse(reader: &mut Read, module: &ParseModule) -> Result<Operation, ParseError> {
-		print!("opcode ");
 		let opcode = reader.bytes().next().unwrap().unwrap();
-		println!("{:?}", opcode);
 		match opcode {
 
 			// Control flow operators

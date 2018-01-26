@@ -153,7 +153,6 @@ impl RuntimeModule {
 
                 let mut stack = vec![];
                 for operation in &(operations) {
-                    println!("operation {:?}", operation);
                     match *operation {
                         Operation::Unreachable => panic!("Unreachable code executed"),
                         Operation::Nop => {},
@@ -199,9 +198,6 @@ impl RuntimeModule {
                                 }
                             }
                             if let Some(ValueTypeProvider::I32(index)) = stack.pop() {
-
-                                println!("{:?}", index);
-
                                 let &Table::AnyFunc{ref limits, ref values} = &(module.tables)[0];
                                 let fn_index = values.get(index as usize).unwrap();
                                 let callable = module.functions.get(*fn_index).unwrap();
@@ -218,11 +214,20 @@ impl RuntimeModule {
                         Operation::End => {
                             break
                         },
+                        Operation::I32Add => {
+                            if let Some(ValueTypeProvider::I32(a)) = stack.pop() {
+                                if let Some(ValueTypeProvider::I32(b)) = stack.pop() {
+                                    stack.push(ValueTypeProvider::I32(a + b));
+                                } else {
+                                    panic!("second operand must be i32");
+                                }
+                            } else {
+                                panic!("first operand must be i32");
+                            }
+                        }
                         _ => panic!("not supported yet")
                     }
-                    println!("stack after: {:?}", stack);
                 }
-                println!("returning: {:#?}", stack);
                 let mut results = vec![];
                 for ret in &rets {
                     match *ret {
