@@ -162,7 +162,7 @@ impl RuntimeModule {
                         if let Some($head) = $stack.pop() {
                             op!(@i $op, $stack, $($vt),*);
                         } else {
-                            println!("wrong vtp");
+                            println!("wrong ValueTypeProvider");
                         }
                     };
                     
@@ -170,28 +170,26 @@ impl RuntimeModule {
                         if let Some($head) = $stack.pop() {
                             $op;
                         } else {
-                            println!("wrong vtp");
+                            println!("wrong ValueTypeProvider");
                         }
                     };
                 }
+
                 macro_rules! op_cmp {
-                    ($cmp:expr, i32) => {
-                        op!(stack.push(ValueTypeProvider::I32($cmp(a,b) as i32)),
-                            ValueTypeProvider::I32(a) => ValueTypeProvider::I32(b));
+                    (@i32, $a:ident, $b:ident, $cmp:expr) => {
+                        op!(stack.push(ValueTypeProvider::I32($cmp as i32)), ValueTypeProvider::I32($a) => ValueTypeProvider::I32($b));
                     };
-                    ($cmp:expr, i64) => {
-                        op!(stack.push(ValueTypeProvider::I32($cmp(a,b) as i32)),
-                            ValueTypeProvider::I64(a) => ValueTypeProvider::I64(b));
+                    (@i64, $a:ident, $b:ident, $cmp:expr) => {
+                        op!(stack.push(ValueTypeProvider::I32($cmp as i32)), ValueTypeProvider::I64($a) => ValueTypeProvider::I64($b));
                     };
-                    ($cmp:expr, f32) => {
-                        op!(stack.push(ValueTypeProvider::I32($cmp(a,b) as i32)),
-                            ValueTypeProvider::F32(a) => ValueTypeProvider::F32(b));
+                    (@f32, $a:ident, $b:ident, $cmp:expr) => {
+                        op!(stack.push(ValueTypeProvider::I32($cmp as i32)), ValueTypeProvider::F32($a) => ValueTypeProvider::F32($b));
                     };
-                    ($cmp:expr, f64) => {
-                        op!(stack.push(ValueTypeProvider::I32($cmp(a,b) as i32)),
-                            ValueTypeProvider::F64(a) => ValueTypeProvider::F64(b));
-                    }
+                    (@f64, $a:ident, $b:ident, $cmp:expr) => {
+                        op!(stack.push(ValueTypeProvider::I32($cmp as i32)), ValueTypeProvider::F64($a) => ValueTypeProvider::F64($b));
+                    };
                 }
+                
                 for operation in &(operations) {
                     match *operation {
                         Operation::Unreachable => panic!("Unreachable code executed"),
@@ -265,8 +263,8 @@ impl RuntimeModule {
                                 let &Table::AnyFunc{ref limits, ref values} = &(module.tables)[0];
                                 let fn_index = values.get(index as usize).unwrap();
                                 let callable = module.functions.get(*fn_index).unwrap();
-                                for vtp in callable(module, args) {
-                                    stack.push(vtp);
+                                for ValueTypeProvider in callable(module, args) {
+                                    stack.push(ValueTypeProvider);
                                 }
                             } else {
                                 panic!("function not found or not indexed by i32");
@@ -277,7 +275,7 @@ impl RuntimeModule {
                             let a = stack.pop().unwrap();
                             let b = stack.pop().unwrap();
                             if std::mem::discriminant(&a) != std::mem::discriminant(&b) {
-                                panic!("vtp must be the same for 'a' and 'b' in 'select' op!")
+                                panic!("ValueTypeProvider must be the same for 'a' and 'b' in 'select' op!")
                             }
                             op!(if v != 0 {
                                 stack.push(a);
@@ -338,42 +336,42 @@ impl RuntimeModule {
                             op!(stack.push(ValueTypeProvider::I32((v == 0) as i32)), 
                                 ValueTypeProvider::I32(v));
                         },
-                        Operation::I32Eq => {op_cmp!(|a,b|a==b, i32);},
-                        Operation::I32Ne => {op_cmp!(|a,b|a!=b, i32);},
-                        Operation::I32LtS => {op_cmp!(|a,b|a<b, i32);},
-                        Operation::I32LtU => {op_cmp!(|a,b|(a as u32) < (b as u32), i32);},
-                        Operation::I32GtS => {op_cmp!(|a,b|a>b, i32);},
-                        Operation::I32GtU => {op_cmp!(|a,b|(a as u32) > (b as u32), i32);},
-                        Operation::I32LeS => {op_cmp!(|a,b|a<=b, i32);},
-                        Operation::I32LeU => {op_cmp!(|a,b|(a as u32) <= (b as u32), i32);},
-                        Operation::I32GeS => {op_cmp!(|a,b|a>=b, i32);},
-                        Operation::I32GeU => {op_cmp!(|a,b|(a as u32) >= (b as u32), i32);},
+                        Operation::I32Eq => {op_cmp!(@i32, a, b, a==b);},
+                        Operation::I32Ne => {op_cmp!(@i32, a, b, a!=b);},
+                        Operation::I32LtS => {op_cmp!(@i32, a, b, a<b);},
+                        Operation::I32LtU => {op_cmp!(@i32, a, b, (a as u32) < (b as u32));},
+                        Operation::I32GtS => {op_cmp!(@i32, a, b, a>b);},
+                        Operation::I32GtU => {op_cmp!(@i32, a, b, (a as u32) > (b as u32));},
+                        Operation::I32LeS => {op_cmp!(@i32, a, b, a<=b);},
+                        Operation::I32LeU => {op_cmp!(@i32, a, b, (a as u32) <= (b as u32));},
+                        Operation::I32GeS => {op_cmp!(@i32, a, b, a>=b);},
+                        Operation::I32GeU => {op_cmp!(@i32, a, b, (a as u32) >= (b as u32));},
                         Operation::I64Eqz => {
                             op!(stack.push(ValueTypeProvider::I32((v == 0) as i32)), 
                                 ValueTypeProvider::I64(v));
                         },
-                        Operation::I64Eq => {op_cmp!(|a,b|a==b, i64);},
-                        Operation::I64Ne => {op_cmp!(|a,b|a!=b, i64);},
-                        Operation::I64LtS => {op_cmp!(|a,b|a<b, i64);},
-                        Operation::I64LtU => {op_cmp!(|a,b|(a as u32) < (b as u32), i64);},
-                        Operation::I64GtS => {op_cmp!(|a,b|a>b, i64);},
-                        Operation::I64GtU => {op_cmp!(|a,b|(a as u32) > (b as u32), i64);},
-                        Operation::I64LeS => {op_cmp!(|a,b|a<=b, i64);},
-                        Operation::I64LeU => {op_cmp!(|a,b|(a as u32) <= (b as u32), i64);},
-                        Operation::I64GeS => {op_cmp!(|a,b|a>=b, i64);},
-                        Operation::I64GeU => {op_cmp!(|a,b|(a as u32) >= (b as u32), i64);},
-                        Operation::F32Eq => {op_cmp!(|a,b|a==b, f32);},
-                        Operation::F32Ne => {op_cmp!(|a,b|a!=b, f32);},
-                        Operation::F32Lt => {op_cmp!(|a,b|a<b, f32);},
-                        Operation::F32Gt => {op_cmp!(|a,b|a>b, f32);},
-                        Operation::F32Le => {op_cmp!(|a,b|a<=b, f32);},
-                        Operation::F32Ge => {op_cmp!(|a,b|a>=b, f32);},
-                        Operation::F64Eq => {op_cmp!(|a,b|a==b, f64);},
-                        Operation::F64Ne => {op_cmp!(|a,b|a!=b, f64);},
-                        Operation::F64Lt => {op_cmp!(|a,b|a<b, f64);},
-                        Operation::F64Gt => {op_cmp!(|a,b|a>b, f64);},
-                        Operation::F64Le => {op_cmp!(|a,b|a<=b, f64);},
-                        Operation::F64Ge => {op_cmp!(|a,b|a>=b, f64);},
+                        Operation::I64Eq => {op_cmp!(@i64, a, b, a==b);},
+                        Operation::I64Ne => {op_cmp!(@i64, a, b, a!=b);},
+                        Operation::I64LtS => {op_cmp!(@i64, a, b, a<b);},
+                        Operation::I64LtU => {op_cmp!(@i64, a, b, (a as u32) < (b as u32));},
+                        Operation::I64GtS => {op_cmp!(@i64, a, b, a>b);},
+                        Operation::I64GtU => {op_cmp!(@i64, a, b, (a as u32) > (b as u32));},
+                        Operation::I64LeS => {op_cmp!(@i64, a, b, a<=b);},
+                        Operation::I64LeU => {op_cmp!(@i64, a, b, (a as u32) <= (b as u32));},
+                        Operation::I64GeS => {op_cmp!(@i64, a, b, a>=b);},
+                        Operation::I64GeU => {op_cmp!(@i64, a, b, (a as u32) >= (b as u32));},
+                        Operation::F32Eq => {op_cmp!(@f32, a, b, a==b);},
+                        Operation::F32Ne => {op_cmp!(@f32, a, b, a!=b);},
+                        Operation::F32Lt => {op_cmp!(@f32, a, b, a<b);},
+                        Operation::F32Gt => {op_cmp!(@f32, a, b, a>b);},
+                        Operation::F32Le => {op_cmp!(@f32, a, b, a<=b);},
+                        Operation::F32Ge => {op_cmp!(@f32, a, b, a>=b);},
+                        Operation::F64Eq => {op_cmp!(@f64, a, b, a==b);},
+                        Operation::F64Ne => {op_cmp!(@f64, a, b, a!=b);},
+                        Operation::F64Lt => {op_cmp!(@f64, a, b, a<b);},
+                        Operation::F64Gt => {op_cmp!(@f64, a, b, a>b);},
+                        Operation::F64Le => {op_cmp!(@f64, a, b, a<=b);},
+                        Operation::F64Ge => {op_cmp!(@f64, a, b, a>=b);},
                         Operation::I32Clz => {},
                         Operation::I32Ctz => {},
                         Operation::I32Popcnt => {},
