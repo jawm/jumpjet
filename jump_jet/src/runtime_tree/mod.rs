@@ -173,6 +173,19 @@ impl RuntimeModule {
                             println!("wrong ValueTypeProvider");
                         }
                     };
+
+                    (@1i32, $a:ident, $op:expr) => {
+                        op!(@i $op, stack, ValueTypeProvider::I32($a));
+                    };
+                    (@1i64, $a:ident, $op:expr) => {
+                        op!(@i $op, stack, ValueTypeProvider::I64($a));
+                    };
+                    (@1f32, $a:ident, $op:expr) => {
+                        op!(@i $op, stack, ValueTypeProvider::F32($a));
+                    };
+                    (@1f64 $a:ident, $op:expr) => {
+                        op!(@i $op, stack, ValueTypeProvider::F64($a));
+                    };
                 }
 
                 macro_rules! op_cmp {
@@ -333,8 +346,7 @@ impl RuntimeModule {
                             stack.push(ValueTypeProvider::F64(value));
                         },
                         Operation::I32Eqz => {
-                            op!(stack.push(ValueTypeProvider::I32((v == 0) as i32)), 
-                                ValueTypeProvider::I32(v));
+                            op!(@1i32, a, stack.push(ValueTypeProvider::I32((a == 0) as i32)));
                         },
                         Operation::I32Eq => {op_cmp!(@i32, a, b, a==b);},
                         Operation::I32Ne => {op_cmp!(@i32, a, b, a!=b);},
@@ -347,8 +359,7 @@ impl RuntimeModule {
                         Operation::I32GeS => {op_cmp!(@i32, a, b, a>=b);},
                         Operation::I32GeU => {op_cmp!(@i32, a, b, (a as u32) >= (b as u32));},
                         Operation::I64Eqz => {
-                            op!(stack.push(ValueTypeProvider::I32((v == 0) as i32)), 
-                                ValueTypeProvider::I64(v));
+                            op!(@1i64, a, stack.push(ValueTypeProvider::I32((a == 0) as i32)));
                         },
                         Operation::I64Eq => {op_cmp!(@i64, a, b, a==b);},
                         Operation::I64Ne => {op_cmp!(@i64, a, b, a!=b);},
@@ -373,16 +384,13 @@ impl RuntimeModule {
                         Operation::F64Le => {op_cmp!(@f64, a, b, a<=b);},
                         Operation::F64Ge => {op_cmp!(@f64, a, b, a>=b);},
                         Operation::I32Clz => {
-                            op!(stack.push(ValueTypeProvider::I32(a.leading_zeros() as i32)), 
-                                ValueTypeProvider::I32(a));
+                            op!(@1i32, a, stack.push(ValueTypeProvider::I32(a.leading_zeros() as i32)));
                         },
                         Operation::I32Ctz => {
-                            op!(stack.push(ValueTypeProvider::I32(a.trailing_zeros() as i32)), 
-                                ValueTypeProvider::I32(a));
+                            op!(@1i32, a, stack.push(ValueTypeProvider::I32(a.trailing_zeros() as i32)));
                         },
                         Operation::I32Popcnt => {
-                            op!(stack.push(ValueTypeProvider::I32(a.count_ones() as i32)), 
-                                ValueTypeProvider::I32(a));
+                            op!(@1i32, a, stack.push(ValueTypeProvider::I32(a.count_ones() as i32)));
                         },
                         Operation::I32Add => {
                             op!(stack.push(ValueTypeProvider::I32(a + b)),
