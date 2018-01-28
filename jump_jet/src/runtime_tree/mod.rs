@@ -189,7 +189,7 @@ impl RuntimeModule {
                         op!(stack.push(ValueTypeProvider::I32($cmp as i32)), ValueTypeProvider::F64($a) => ValueTypeProvider::F64($b));
                     };
                 }
-                
+
                 for operation in &(operations) {
                     match *operation {
                         Operation::Unreachable => panic!("Unreachable code executed"),
@@ -372,9 +372,18 @@ impl RuntimeModule {
                         Operation::F64Gt => {op_cmp!(@f64, a, b, a>b);},
                         Operation::F64Le => {op_cmp!(@f64, a, b, a<=b);},
                         Operation::F64Ge => {op_cmp!(@f64, a, b, a>=b);},
-                        Operation::I32Clz => {},
-                        Operation::I32Ctz => {},
-                        Operation::I32Popcnt => {},
+                        Operation::I32Clz => {
+                            op!(stack.push(ValueTypeProvider::I32(a.leading_zeros() as i32)), 
+                                ValueTypeProvider::I32(a));
+                        },
+                        Operation::I32Ctz => {
+                            op!(stack.push(ValueTypeProvider::I32(a.trailing_zeros() as i32)), 
+                                ValueTypeProvider::I32(a));
+                        },
+                        Operation::I32Popcnt => {
+                            op!(stack.push(ValueTypeProvider::I32(a.count_ones() as i32)), 
+                                ValueTypeProvider::I32(a));
+                        },
                         Operation::I32Add => {
                             op!(stack.push(ValueTypeProvider::I32(a + b)),
                                 ValueTypeProvider::I32(a) => ValueTypeProvider::I32(b));
@@ -408,9 +417,18 @@ impl RuntimeModule {
                         Operation::I32ShrU => {},
                         Operation::I32Rotl => {},
                         Operation::I32Rotr => {},
-                        Operation::I64Clz => {},
-                        Operation::I64Ctz => {},
-                        Operation::I64Popcnt => {},
+                        Operation::I64Clz => {
+                            op!(stack.push(ValueTypeProvider::I32(a.leading_zeros() as i32)), 
+                                ValueTypeProvider::I64(a));
+                        },
+                        Operation::I64Ctz => {
+                            op!(stack.push(ValueTypeProvider::I32(a.trailing_zeros() as i32)), 
+                                ValueTypeProvider::I64(a));
+                        },
+                        Operation::I64Popcnt => {
+                            op!(stack.push(ValueTypeProvider::I32(a.count_ones() as i32)), 
+                                ValueTypeProvider::I64(a));
+                        },
                         Operation::I64Add => {},
                         Operation::I64Sub => {},
                         Operation::I64Mul => {},
