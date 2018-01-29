@@ -153,53 +153,59 @@ impl RuntimeModule {
                 }
 
                 let mut stack = vec![];
+
                 macro_rules! op {
-                    ($op:expr, $($vt:pat)=>*) => {
-                        op!(@i $op, stack, $($vt),*);
+                    ($($a:ident:$b:ident),* | $r:ident => $op:expr) => {
+                        op!(@a $op, $($a:$b),* | $r);
                     };
-                    
-                    (@i $op:expr, $stack:expr, $head:pat, $($vt:pat),*) => {
-                        if let Some($head) = $stack.pop() {
-                            op!(@i $op, $stack, $($vt),*);
-                        } else {
-                            println!("wrong ValueTypeProvider");
-                        }
+
+                    ($($a:ident:$b:ident),* | @bool => $op:expr) => {
+                        op!(@a $op as i32, $($a:$b),* | I32);
                     };
-                    
-                    (@i $op:expr, $stack:expr, $head:pat) => {
-                        if let Some($head) = $stack.pop() {
-                            $op;
-                        } else {
-                            println!("wrong ValueTypeProvider");
+
+                    ($($a:ident:$b:ident),* | @any => $op:expr) => {
+                        op!(@b $op, $($a:$b),* | @any);
+                    };
+
+                    (@a $op:expr, $hn:ident:$ht:ident, $($a:ident:$b:ident),* | $r:ident) => {
+                        if let Some(ValueTypeProvider::$ht($hn)) = stack.pop() {
+                            println!("once");
+                            op!(@a $op, $($a:$b),* | $r);
                         }
                     };
 
-                    (@1i32, $a:ident, $op:expr) => {
-                        op!(@i $op, stack, ValueTypeProvider::I32($a));
+                    (@a $op:expr, $hn:ident:$ht:ident | $r:ident) => {
+                        if let Some(ValueTypeProvider::$ht($hn)) = stack.pop() {
+                            stack.push(ValueTypeProvider::$r($op));
+                        }
                     };
-                    (@1i64, $a:ident, $op:expr) => {
-                        op!(@i $op, stack, ValueTypeProvider::I64($a));
+
+                    (@b $op:expr, $hn:ident:$ht:ident, $($a:ident:$b:ident),* | @any) => {
+                        if let Some(ValueTypeProvider::$ht($hn)) = stack.pop() {
+                            println!("once");
+                            op!(@b $op, $($a:$b),* | @any);
+                        }
                     };
-                    (@1f32, $a:ident, $op:expr) => {
-                        op!(@i $op, stack, ValueTypeProvider::F32($a));
-                    };
-                    (@1f64 $a:ident, $op:expr) => {
-                        op!(@i $op, stack, ValueTypeProvider::F64($a));
+
+                    (@b $op:expr, $hn:ident:$ht:ident | @any) => {
+                        if let Some(ValueTypeProvider::$ht($hn)) = stack.pop() {
+                            stack.push($op);
+                        }
                     };
                 }
 
                 macro_rules! op_cmp {
                     (@i32, $a:ident, $b:ident, $cmp:expr) => {
-                        op!(stack.push(ValueTypeProvider::I32($cmp as i32)), ValueTypeProvider::I32($a) => ValueTypeProvider::I32($b));
+                        op!($a:I32, $b:I32 | @bool => $cmp);
                     };
                     (@i64, $a:ident, $b:ident, $cmp:expr) => {
-                        op!(stack.push(ValueTypeProvider::I32($cmp as i32)), ValueTypeProvider::I64($a) => ValueTypeProvider::I64($b));
+                        op!($a:I64, $b:I64 | @bool => $cmp);
                     };
                     (@f32, $a:ident, $b:ident, $cmp:expr) => {
-                        op!(stack.push(ValueTypeProvider::I32($cmp as i32)), ValueTypeProvider::F32($a) => ValueTypeProvider::F32($b));
+                        op!($a:F32, $b:F32 | @bool => $cmp);
                     };
                     (@f64, $a:ident, $b:ident, $cmp:expr) => {
-                        op!(stack.push(ValueTypeProvider::I32($cmp as i32)), ValueTypeProvider::F64($a) => ValueTypeProvider::F64($b));
+                        op!($a:F64, $b:F64 | @bool => $cmp);
                     };
                 }
 
@@ -210,33 +216,15 @@ impl RuntimeModule {
                         Operation::Block(ref b) => {
                             // TODO maybe do stuff recursively here, because I'm lazy af
                         },
-                        Operation::Loop(ref b) => {
-
-                        },
-                        Operation::If(ref b) => {
-
-                        },
-                        Operation::Else => {
-
-                        },
-                        Operation::End => {
-                            break
-                        },
-                        Operation::Branch(i) => {
-
-                        },
-                        Operation::BranchIf(i) => {
-
-                        },
-                        Operation::BranchTable(ref bt) => {
-
-                        },
-                        Operation::Return => {
-
-                        },
-                        Operation::Call(i) => {
-
-                        },
+                        Operation::Loop(ref b) => {},
+                        Operation::If(ref b) => {},
+                        Operation::Else => {},
+                        Operation::End => {break},
+                        Operation::Branch(i) => {},
+                        Operation::BranchIf(i) => {},
+                        Operation::BranchTable(ref bt) => {},
+                        Operation::Return => {},
+                        Operation::Call(i) => {},
                         Operation::CallIndirect(idx, _) => {
                             let &TypeDefinition::Func(ref signature) = &(module.types)[idx];
                             let mut args = vec![];
@@ -290,24 +278,19 @@ impl RuntimeModule {
                             if std::mem::discriminant(&a) != std::mem::discriminant(&b) {
                                 panic!("ValueTypeProvider must be the same for 'a' and 'b' in 'select' op!")
                             }
-                            op!(if v != 0 {
-                                stack.push(a);
-                            } else {
-                                stack.push(b);
-                            }, ValueTypeProvider::I32(v));
+                            op!(v:I32 | @any => {
+                                if v != 0 {
+                                    a
+                                } else {
+                                    b
+                                }
+                            });
                         },
                         Operation::GetLocal(idx) => stack.push(local_space[idx].clone()),
-                        Operation::SetLocal(idx) => {
-
-                        },
-                        Operation::TeeLocal(idx) => {
-
-                        },
-                        Operation::GetGlobal(idx) => {
-                        },
-                        Operation::SetGlobal(idx) => {
-
-                        },
+                        Operation::SetLocal(idx) => {},
+                        Operation::TeeLocal(idx) => {},
+                        Operation::GetGlobal(idx) => {},
+                        Operation::SetGlobal(idx) => {},
                         Operation::I32Load(ref mem) => {},
                         Operation::I64Load(ref mem) => {},
                         Operation::F32Load(ref mem) => {},
@@ -345,9 +328,7 @@ impl RuntimeModule {
                         Operation::F64Const(value) => {
                             stack.push(ValueTypeProvider::F64(value));
                         },
-                        Operation::I32Eqz => {
-                            op!(@1i32, a, stack.push(ValueTypeProvider::I32((a == 0) as i32)));
-                        },
+                        Operation::I32Eqz => {op!(a:I32 | @bool => a==0);},
                         Operation::I32Eq => {op_cmp!(@i32, a, b, a==b);},
                         Operation::I32Ne => {op_cmp!(@i32, a, b, a!=b);},
                         Operation::I32LtS => {op_cmp!(@i32, a, b, a<b);},
@@ -358,9 +339,7 @@ impl RuntimeModule {
                         Operation::I32LeU => {op_cmp!(@i32, a, b, (a as u32) <= (b as u32));},
                         Operation::I32GeS => {op_cmp!(@i32, a, b, a>=b);},
                         Operation::I32GeU => {op_cmp!(@i32, a, b, (a as u32) >= (b as u32));},
-                        Operation::I64Eqz => {
-                            op!(@1i64, a, stack.push(ValueTypeProvider::I32((a == 0) as i32)));
-                        },
+                        Operation::I64Eqz => {op!(a:I32 | @bool => a==0);},
                         Operation::I64Eq => {op_cmp!(@i64, a, b, a==b);},
                         Operation::I64Ne => {op_cmp!(@i64, a, b, a!=b);},
                         Operation::I64LtS => {op_cmp!(@i64, a, b, a<b);},
@@ -383,60 +362,27 @@ impl RuntimeModule {
                         Operation::F64Gt => {op_cmp!(@f64, a, b, a>b);},
                         Operation::F64Le => {op_cmp!(@f64, a, b, a<=b);},
                         Operation::F64Ge => {op_cmp!(@f64, a, b, a>=b);},
-                        Operation::I32Clz => {
-                            op!(@1i32, a, stack.push(ValueTypeProvider::I32(a.leading_zeros() as i32)));
-                        },
-                        Operation::I32Ctz => {
-                            op!(@1i32, a, stack.push(ValueTypeProvider::I32(a.trailing_zeros() as i32)));
-                        },
-                        Operation::I32Popcnt => {
-                            op!(@1i32, a, stack.push(ValueTypeProvider::I32(a.count_ones() as i32)));
-                        },
-                        Operation::I32Add => {
-                            op!(stack.push(ValueTypeProvider::I32(a + b)),
-                                ValueTypeProvider::I32(a) => ValueTypeProvider::I32(b));
-                        }
-                        Operation::I32Sub => {
-                            op!(stack.push(ValueTypeProvider::I32(a - b)),
-                                ValueTypeProvider::I32(a) => ValueTypeProvider::I32(b));
-                        },
-                        Operation::I32Mul => {
-                            op!(stack.push(ValueTypeProvider::I32(a * b)),
-                                ValueTypeProvider::I32(a) => ValueTypeProvider::I32(b));
-                        },
+                        Operation::I32Clz => {op!(a:I32 | I32 => a.leading_zeros() as i32);},
+                        Operation::I32Ctz => {op!(a:I32 | I32 => a.trailing_zeros() as i32);},
+                        Operation::I32Popcnt => {op!(a:I32 | I32 => a.count_ones() as i32);},
+                        Operation::I32Add => {op!(a:I32, b:I32 | I32 => a+b);}
+                        Operation::I32Sub => {op!(a:I32, b:I32 | I32 => a - b);},
+                        Operation::I32Mul => {op!(a:I32, b:I32 | I32 => a * b);},
                         Operation::I32DivS => {},
                         Operation::I32DivU => {},
                         Operation::I32RemS => {},
                         Operation::I32RemU => {},
-                        Operation::I32And => {
-                            op!(stack.push(ValueTypeProvider::I32(a & b)),
-                                ValueTypeProvider::I32(a) => ValueTypeProvider::I32(b));
-                        },
-                        Operation::I32Or => {
-                            op!(stack.push(ValueTypeProvider::I32(a | b)),
-                                ValueTypeProvider::I32(a) => ValueTypeProvider::I32(b));
-                        },
-                        Operation::I32Xor => {
-                            op!(stack.push(ValueTypeProvider::I32(a ^ b)),
-                                ValueTypeProvider::I32(a) => ValueTypeProvider::I32(b));
-                        },
+                        Operation::I32And => {op!(a:I32, b:I32 | I32 => a & b);},
+                        Operation::I32Or => {op!(a:I32, b:I32 | I32 => a | b);},
+                        Operation::I32Xor => {op!(a:I32, b:I32 | I32 => a ^ b);},
                         Operation::I32Shl => {},
                         Operation::I32ShrS => {},
                         Operation::I32ShrU => {},
                         Operation::I32Rotl => {},
                         Operation::I32Rotr => {},
-                        Operation::I64Clz => {
-                            op!(stack.push(ValueTypeProvider::I32(a.leading_zeros() as i32)), 
-                                ValueTypeProvider::I64(a));
-                        },
-                        Operation::I64Ctz => {
-                            op!(stack.push(ValueTypeProvider::I32(a.trailing_zeros() as i32)), 
-                                ValueTypeProvider::I64(a));
-                        },
-                        Operation::I64Popcnt => {
-                            op!(stack.push(ValueTypeProvider::I32(a.count_ones() as i32)), 
-                                ValueTypeProvider::I64(a));
-                        },
+                        Operation::I64Clz => {op!(a:I64 | I32 => a.leading_zeros() as i32);},
+                        Operation::I64Ctz => {op!(a:I64 | I32 => a.trailing_zeros() as i32);},
+                        Operation::I64Popcnt => {op!(a:I64 | I32 => a.count_ones() as i32);},
                         Operation::I64Add => {},
                         Operation::I64Sub => {},
                         Operation::I64Mul => {},
