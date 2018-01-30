@@ -180,21 +180,6 @@ impl RuntimeModule {
                     };
                 }
 
-                macro_rules! op_cmp {
-                    (@i32, $a:ident, $b:ident, $cmp:expr) => {
-                        op!($a:I32, $b:I32 | @bool => $cmp);
-                    };
-                    (@i64, $a:ident, $b:ident, $cmp:expr) => {
-                        op!($a:I64, $b:I64 | @bool => $cmp);
-                    };
-                    (@f32, $a:ident, $b:ident, $cmp:expr) => {
-                        op!($a:F32, $b:F32 | @bool => $cmp);
-                    };
-                    (@f64, $a:ident, $b:ident, $cmp:expr) => {
-                        op!($a:F64, $b:F64 | @bool => $cmp);
-                    };
-                }
-
                 for operation in &(operations) {
                     match *operation {
                         Operation::Unreachable => panic!("Unreachable code executed"),
@@ -315,39 +300,39 @@ impl RuntimeModule {
                             stack.push(ValueTypeProvider::F64(value));
                         },
                         Operation::I32Eqz => {op!(a:I32 | @bool => a==0);},
-                        Operation::I32Eq => {op_cmp!(@i32, a, b, a==b);},
-                        Operation::I32Ne => {op_cmp!(@i32, a, b, a!=b);},
-                        Operation::I32LtS => {op_cmp!(@i32, a, b, a<b);},
-                        Operation::I32LtU => {op_cmp!(@i32, a, b, (a as u32) < (b as u32));},
-                        Operation::I32GtS => {op_cmp!(@i32, a, b, a>b);},
-                        Operation::I32GtU => {op_cmp!(@i32, a, b, (a as u32) > (b as u32));},
-                        Operation::I32LeS => {op_cmp!(@i32, a, b, a<=b);},
-                        Operation::I32LeU => {op_cmp!(@i32, a, b, (a as u32) <= (b as u32));},
-                        Operation::I32GeS => {op_cmp!(@i32, a, b, a>=b);},
-                        Operation::I32GeU => {op_cmp!(@i32, a, b, (a as u32) >= (b as u32));},
+                        Operation::I32Eq => {op!(a:I32,b:I32 | @bool => a==b);},
+                        Operation::I32Ne => {op!(a:I32, b:I32 | @bool => a!=b);},
+                        Operation::I32LtS => {op!(a:I32, b:I32 | @bool => a<b);},
+                        Operation::I32LtU => {op!(a:I32, b:I32 | @bool => (a as u32) < (b as u32));},
+                        Operation::I32GtS => {op!(a:I32, b:I32 | @bool => a>b);},
+                        Operation::I32GtU => {op!(a:I32, b:I32 | @bool => (a as u32) > (b as u32));},
+                        Operation::I32LeS => {op!(a:I32, b:I32 | @bool => a<=b);},
+                        Operation::I32LeU => {op!(a:I32, b:I32 | @bool => (a as u32) <= (b as u32));},
+                        Operation::I32GeS => {op!(a:I32, b:I32 | @bool => a>=b);},
+                        Operation::I32GeU => {op!(a:I32, b:I32 | @bool => (a as u32) >= (b as u32));},
                         Operation::I64Eqz => {op!(a:I32 | @bool => a==0);},
-                        Operation::I64Eq => {op_cmp!(@i64, a, b, a==b);},
-                        Operation::I64Ne => {op_cmp!(@i64, a, b, a!=b);},
-                        Operation::I64LtS => {op_cmp!(@i64, a, b, a<b);},
-                        Operation::I64LtU => {op_cmp!(@i64, a, b, (a as u32) < (b as u32));},
-                        Operation::I64GtS => {op_cmp!(@i64, a, b, a>b);},
-                        Operation::I64GtU => {op_cmp!(@i64, a, b, (a as u32) > (b as u32));},
-                        Operation::I64LeS => {op_cmp!(@i64, a, b, a<=b);},
-                        Operation::I64LeU => {op_cmp!(@i64, a, b, (a as u32) <= (b as u32));},
-                        Operation::I64GeS => {op_cmp!(@i64, a, b, a>=b);},
-                        Operation::I64GeU => {op_cmp!(@i64, a, b, (a as u32) >= (b as u32));},
-                        Operation::F32Eq => {op_cmp!(@f32, a, b, a==b);},
-                        Operation::F32Ne => {op_cmp!(@f32, a, b, a!=b);},
-                        Operation::F32Lt => {op_cmp!(@f32, a, b, a<b);},
-                        Operation::F32Gt => {op_cmp!(@f32, a, b, a>b);},
-                        Operation::F32Le => {op_cmp!(@f32, a, b, a<=b);},
-                        Operation::F32Ge => {op_cmp!(@f32, a, b, a>=b);},
-                        Operation::F64Eq => {op_cmp!(@f64, a, b, a==b);},
-                        Operation::F64Ne => {op_cmp!(@f64, a, b, a!=b);},
-                        Operation::F64Lt => {op_cmp!(@f64, a, b, a<b);},
-                        Operation::F64Gt => {op_cmp!(@f64, a, b, a>b);},
-                        Operation::F64Le => {op_cmp!(@f64, a, b, a<=b);},
-                        Operation::F64Ge => {op_cmp!(@f64, a, b, a>=b);},
+                        Operation::I64Eq => {op!(a:I64, b:I64 | @bool => a==b);},
+                        Operation::I64Ne => {op!(a:I64, b:I64 | @bool => a!=b);},
+                        Operation::I64LtS => {op!(a:I64, b:I64 | @bool => a<b);},
+                        Operation::I64LtU => {op!(a:I64, b:I64 | @bool => (a as u32) < (b as u32));},
+                        Operation::I64GtS => {op!(a:I64, b:I64 | @bool => a>b);},
+                        Operation::I64GtU => {op!(a:I64, b:I64 | @bool => (a as u32) > (b as u32));},
+                        Operation::I64LeS => {op!(a:I64, b:I64 | @bool => a<=b);},
+                        Operation::I64LeU => {op!(a:I64, b:I64 | @bool => (a as u32) <= (b as u32));},
+                        Operation::I64GeS => {op!(a:I64, b:I64 | @bool => a>=b);},
+                        Operation::I64GeU => {op!(a:I64, b:I64 | @bool => (a as u32) >= (b as u32));},
+                        Operation::F32Eq => {op!(a:F32, b:F32 | @bool => a==b);},
+                        Operation::F32Ne => {op!(a:F32, b:F32 | @bool => a!=b);},
+                        Operation::F32Lt => {op!(a:F32, b:F32 | @bool => a<b);},
+                        Operation::F32Gt => {op!(a:F32, b:F32 | @bool => a>b);},
+                        Operation::F32Le => {op!(a:F32, b:F32 | @bool => a<=b);},
+                        Operation::F32Ge => {op!(a:F32, b:F32 | @bool => a>=b);},
+                        Operation::F64Eq => {op!(a:F64, b:F64 | @bool => a==b);},
+                        Operation::F64Ne => {op!(a:F64, b:F64 | @bool => a!=b);},
+                        Operation::F64Lt => {op!(a:F64, b:F64 | @bool => a<b);},
+                        Operation::F64Gt => {op!(a:F64, b:F64 | @bool => a>b);},
+                        Operation::F64Le => {op!(a:F64, b:F64 | @bool => a<=b);},
+                        Operation::F64Ge => {op!(a:F64, b:F64 | @bool => a>=b);},
                         Operation::I32Clz => {op!(a:I32 | I32 => a.leading_zeros() as i32);},
                         Operation::I32Ctz => {op!(a:I32 | I32 => a.trailing_zeros() as i32);},
                         Operation::I32Popcnt => {op!(a:I32 | I32 => a.count_ones() as i32);},
