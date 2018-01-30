@@ -156,11 +156,11 @@ impl RuntimeModule {
 
                 macro_rules! op {
                     ($($a:ident:$b:ident),* | $r:ident => $op:expr) => {
-                        op!(@a stack.push(ValueTypeProvider::$r($op)), $($a:$b),* | $r);
+                        op!(@a stack.push(ValueTypeProvider::$r($op)), $($a:$b),*);
                     };
 
                     ($($a:ident:$b:ident),* | @bool => $op:expr) => {
-                        op!(@a stack.push(ValueTypeProvider::I32($op as i32)), $($a:$b),* | I32);
+                        op!(@a stack.push(ValueTypeProvider::I32($op as i32)), $($a:$b),*);
                     };
 
                     ($($a:ident:$b:ident),* | @any => $op:expr) => {
@@ -169,7 +169,7 @@ impl RuntimeModule {
 
                     (@a $op:expr, $hn:ident:$ht:ident, $($a:ident:$b:ident),*) => {
                         if let Some(ValueTypeProvider::$ht($hn)) = stack.pop() {
-                            op!(@a $op, $($a:$b),* | $r);
+                            op!(@a $op, $($a:$b),*);
                         }
                     };
 
