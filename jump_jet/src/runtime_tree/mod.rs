@@ -156,40 +156,26 @@ impl RuntimeModule {
 
                 macro_rules! op {
                     ($($a:ident:$b:ident),* | $r:ident => $op:expr) => {
-                        op!(@a $op, $($a:$b),* | $r);
+                        op!(@a stack.push(ValueTypeProvider::$r($op)), $($a:$b),* | $r);
                     };
 
                     ($($a:ident:$b:ident),* | @bool => $op:expr) => {
-                        op!(@a $op as i32, $($a:$b),* | I32);
+                        op!(@a stack.push(ValueTypeProvider::I32($op as i32)), $($a:$b),* | I32);
                     };
 
                     ($($a:ident:$b:ident),* | @any => $op:expr) => {
-                        op!(@b $op, $($a:$b),* | @any);
+                        op!(@a stack.push($op), $($a:$b),*);
                     };
 
-                    (@a $op:expr, $hn:ident:$ht:ident, $($a:ident:$b:ident),* | $r:ident) => {
+                    (@a $op:expr, $hn:ident:$ht:ident, $($a:ident:$b:ident),*) => {
                         if let Some(ValueTypeProvider::$ht($hn)) = stack.pop() {
-                            println!("once");
                             op!(@a $op, $($a:$b),* | $r);
                         }
                     };
 
-                    (@a $op:expr, $hn:ident:$ht:ident | $r:ident) => {
+                    (@a $op:expr, $hn:ident:$ht:ident) => {
                         if let Some(ValueTypeProvider::$ht($hn)) = stack.pop() {
-                            stack.push(ValueTypeProvider::$r($op));
-                        }
-                    };
-
-                    (@b $op:expr, $hn:ident:$ht:ident, $($a:ident:$b:ident),* | @any) => {
-                        if let Some(ValueTypeProvider::$ht($hn)) = stack.pop() {
-                            println!("once");
-                            op!(@b $op, $($a:$b),* | @any);
-                        }
-                    };
-
-                    (@b $op:expr, $hn:ident:$ht:ident | @any) => {
-                        if let Some(ValueTypeProvider::$ht($hn)) = stack.pop() {
-                            stack.push($op);
+                            $op;
                         }
                     };
                 }
