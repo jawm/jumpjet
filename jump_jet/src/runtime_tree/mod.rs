@@ -1,9 +1,14 @@
+extern crate byteorder;
+use self::byteorder::LittleEndian;
+use self::byteorder::ReadBytesExt;
+
 use std;
 use std::collections::HashMap;
 
 use parse_tree::language_types::ExternalKind;
 use parse_tree::language_types::Operation;
 use parse_tree::language_types::ValueType;
+use parse_tree::memory::Memory;
 use parse_tree::ParseModule;
 use parse_tree::tables::Table;
 use parse_tree::types::TypeDefinition;
@@ -20,9 +25,6 @@ use runtime_tree::globals::Global;
 mod language_types;
 pub use runtime_tree::language_types::ExternalKindInstance;
 pub use runtime_tree::language_types::ValueTypeProvider;
-
-mod memory;
-use runtime_tree::memory::Memory;
 
 pub type Func = Box<Fn(&mut CallFrame, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>;
 
@@ -60,6 +62,7 @@ impl RuntimeModuleBuilder for ParseModule {
             start_function: self.start_function
         };
         m.build_imports(&self, imports);
+        m.build_memories(&self);
         m.build_functions(&self);
         m.build_exports(&self);
         m.build_tables(&self);
@@ -82,6 +85,12 @@ impl RuntimeModuleBuilder for ParseModule {
 impl RuntimeModule {
     pub fn exports<'m>(&'m mut self) -> Box<ExportObject + 'm> {
         Box::new(ExportObj{module: self})
+    }
+
+    fn build_memories(&mut self, parse_module: &ParseModule) {
+        for m in &(parse_module.memories) {
+            self.memories.push((*m).clone());
+        }
     }
 
     fn build_imports(&mut self, parse_module: &ParseModule, mut imports: HashMap<String, HashMap<String, ExternalKindInstance>>) {
@@ -197,6 +206,15 @@ impl RuntimeModule {
                     };
                 }
 
+                macro_rules! mem_op {
+//                            let mut b = &module.memories[0].values[0..3];
+//                            let val = b.read_i32::<LittleEndian>().unwrap();
+//                            stack.push(ValueTypeProvider::I32(val));
+                    ($a:expr => $b:ident) => {
+
+                    }
+                }
+
                 for operation in &(operations) {
                     match *operation {
                         Operation::Unreachable => panic!("Unreachable code executed"),
@@ -310,7 +328,12 @@ impl RuntimeModule {
                                 panic!("no values on stack");
                             }
                         },
-                        Operation::I32Load(ref mem) => {},
+                        Operation::I32Load(ref mem) => {
+                            let mut b = &module.memories[0].values[0..3];
+                            let val = b.read_i32::<LittleEndian>().unwrap();
+                            stack.push(ValueTypeProvider::I32(val));
+                            mem_op!(mem => I32);
+                        },
                         Operation::I64Load(ref mem) => {},
                         Operation::F32Load(ref mem) => {},
                         Operation::F64Load(ref mem) => {},
