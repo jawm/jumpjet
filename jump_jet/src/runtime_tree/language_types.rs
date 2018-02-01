@@ -1,7 +1,8 @@
 use runtime_tree::RuntimeModule;
+use runtime_tree::Func;
 
 pub enum ExternalKindInstance {
-    Function(Box<Fn(&RuntimeModule, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>),
+    Function(Func),
     Table(usize),
     Memory(usize),
     Global(usize),

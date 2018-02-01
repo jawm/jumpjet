@@ -24,14 +24,24 @@ pub use runtime_tree::language_types::ValueTypeProvider;
 mod memory;
 use runtime_tree::memory::Memory;
 
+pub type Func = Box<Fn(&mut CallFrame, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>;
+
 pub struct RuntimeModule {
     types: Vec<TypeDefinition>,
-    functions: Vec<Box<Fn(&RuntimeModule, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>>,
+    functions: Vec<Func>,
     tables: Vec<Table>,
     memories: Vec<Memory>,
-    globals: Vec<Global>,
+    globals: Vec<ValueTypeProvider>,
     exports: HashMap<String, ExternalKindInstance>,
     start_function: Option<usize>,
+}
+
+pub struct CallFrame<'a> {
+    types: &'a Vec<TypeDefinition>,
+    globals: &'a mut Vec<ValueTypeProvider>,
+    memories: &'a mut Vec<Memory>,
+    functions: &'a Vec<Func>,
+    tables: &'a Vec<Table>
 }
 
 pub trait RuntimeModuleBuilder {
@@ -56,15 +66,22 @@ impl RuntimeModuleBuilder for ParseModule {
 
         if let Some(index) = m.start_function {
             let start_fn = m.functions.get(index).unwrap();
-            start_fn(&m, vec![]);
+            let mut call_frame = CallFrame {
+                types: & m.types,
+                tables: & m.tables,
+                memories: &mut m.memories,
+                globals: &mut m.globals,
+                functions: & m.functions
+            };
+            start_fn(&mut call_frame, vec![]);
         }
         Ok(m)
     }
 }
 
 impl RuntimeModule {
-    pub fn exports<'m>(&'m self) -> Box<ExportObject + 'm> {
-        Box::new(ExportObj{module: &self})
+    pub fn exports<'m>(&'m mut self) -> Box<ExportObject + 'm> {
+        Box::new(ExportObj{module: self})
     }
 
     fn build_imports(&mut self, parse_module: &ParseModule, mut imports: HashMap<String, HashMap<String, ExternalKindInstance>>) {
@@ -258,10 +275,41 @@ impl RuntimeModule {
                             });
                         },
                         Operation::GetLocal(idx) => stack.push(local_space[idx].clone()),
-                        Operation::SetLocal(idx) => {},
-                        Operation::TeeLocal(idx) => {},
-                        Operation::GetGlobal(idx) => {},
-                        Operation::SetGlobal(idx) => {},
+                        Operation::SetLocal(idx) => {
+                            if let Some(vtp) = stack.pop() {
+                                if std::mem::discriminant(&local_space[idx]) == std::mem::discriminant(&vtp) {
+                                    local_space[idx] = vtp;
+                                } else {
+                                    panic!("Wrong type provided for local set");
+                                }
+                            } else {
+                                panic!("no values on stack");
+                            }
+                        },
+                        Operation::TeeLocal(idx) => {
+                            if let Some(vtp) = stack.pop() {
+                                if std::mem::discriminant(&local_space[idx]) == std::mem::discriminant(&vtp) {
+                                    local_space[idx] = vtp.clone();
+                                    stack.push(vtp);
+                                } else {
+                                    panic!("Wrong type provided for local set");
+                                }
+                            } else {
+                                panic!("no values on stack");
+                            }
+                        },
+                        Operation::GetGlobal(idx) => stack.push(module.globals[idx].clone()),
+                        Operation::SetGlobal(idx) => {
+                            if let Some(vtp) = stack.pop() {
+                                if std::mem::discriminant(&module.globals[idx]) == std::mem::discriminant(&vtp) {
+                                    module.globals[idx] = vtp;
+                                } else {
+                                    panic!("Wrong type provided for local set");
+                                }
+                            } else {
+                                panic!("no values on stack");
+                            }
+                        },
                         Operation::I32Load(ref mem) => {},
                         Operation::I64Load(ref mem) => {},
                         Operation::F32Load(ref mem) => {},
@@ -464,7 +512,14 @@ impl RuntimeModule {
             match *value {
                 ExternalKind::Function(i) => {
                     self.exports.insert(key.clone(), ExternalKindInstance::Function(Box::new(move |module, args| {
-                        return module.functions[i](module, args);
+                        let mut c = CallFrame {
+                            tables: & module.tables,
+                            types: & module.types,
+                            globals: &mut module.globals,
+                            memories: &mut module.memories,
+                            functions: & module.functions
+                        };
+                        return module.functions[i](&mut c, args);
                     })));
                 },
                 ExternalKind::Memory(i) => {
