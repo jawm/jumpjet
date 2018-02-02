@@ -207,6 +207,20 @@ impl RuntimeModule {
                 }
 
                 macro_rules! mem_op {
+                    // Read a 32bit int onto the stack
+                    // mem_op!(mem => I32(i32));
+
+                    // Write a 32bit int onto the stack
+                    // mem_op!(I32(i32) => mem);
+
+                    ($a:expr => $b:ident($c:ty)) => {
+                        let offset = ($a.flags + $a.offset) as usize;
+                        let size = std::mem::size_of::<$c>() as usize;
+                        let a = &mut module.memories[0].values[offset..offset+8];
+                        let value = a.read_int::<LittleEndian>(size).unwrap() as $c;
+                        stack.push(ValueTypeProvider::$b(value));
+                    };
+
                     ($a:expr => $b:ident:$c:ident($d:expr), $e:expr) => {
                         let offset = ($a.flags + $a.offset) as usize;
                         let mut $b = &module.memories[0].values[offset..offset+$d as usize];
@@ -335,7 +349,7 @@ impl RuntimeModule {
                                 panic!("no values on stack");
                             }
                         },
-                        Operation::I32Load(ref mem) => {mem_op!(mem => a:I32(4), a.read_i32::<LittleEndian>().unwrap());},
+                        Operation::I32Load(ref mem) => {mem_op!(mem => I32(i32));},
                         Operation::I64Load(ref mem) => {mem_op!(mem => a:I64(8), a.read_i64::<LittleEndian>().unwrap());},
                         Operation::F32Load(ref mem) => {mem_op!(mem => a:F32(8), a.read_f32::<LittleEndian>().unwrap());},
                         Operation::F64Load(ref mem) => {mem_op!(mem => a:F64(8), a.read_f64::<LittleEndian>().unwrap());},
