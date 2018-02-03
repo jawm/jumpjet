@@ -376,18 +376,10 @@ impl RuntimeModule {
                         Operation::I64Store32(ref mem) => {mem_op!(I64(i32) => mem);},
                         Operation::CurrentMemory(_) => {},
                         Operation::GrowMemory(_) => {},
-                        Operation::I32Const(value) => {
-                            stack.push(ValueTypeProvider::I32(value))
-                        },
-                        Operation::I64Const(value) => {
-                            stack.push(ValueTypeProvider::I64(value))
-                        },
-                        Operation::F32Const(value) => {
-                            stack.push(ValueTypeProvider::F32(value))
-                        },
-                        Operation::F64Const(value) => {
-                            stack.push(ValueTypeProvider::F64(value))
-                        },
+                        Operation::I32Const(value) => {stack.push(ValueTypeProvider::I32(value))},
+                        Operation::I64Const(value) => {stack.push(ValueTypeProvider::I64(value))},
+                        Operation::F32Const(value) => {stack.push(ValueTypeProvider::F32(value))},
+                        Operation::F64Const(value) => {stack.push(ValueTypeProvider::F64(value))},
                         Operation::I32Eqz => {op!(a:I32 | @bool => a==0)},
                         Operation::I32Eq => {op!(a:I32,b:I32 | @bool => a==b)},
                         Operation::I32Ne => {op!(a:I32, b:I32 | @bool => a!=b)},
