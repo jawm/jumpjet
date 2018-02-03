@@ -1,6 +1,7 @@
 extern crate byteorder;
 use self::byteorder::LittleEndian;
 use self::byteorder::ReadBytesExt;
+use self::byteorder::WriteBytesExt;
 
 use std;
 use std::collections::HashMap;
@@ -213,26 +214,27 @@ impl RuntimeModule {
                     // Write a 32bit int onto the stack
                     // mem_op!(I32(i32) => mem);
 
-                    ($a:expr => $b:ident($c:ty)) => {
+                    ($a:expr => $b:ident($c:ty,$d:ty)) => {
                         let offset = ($a.flags + $a.offset) as usize;
                         let size = std::mem::size_of::<$c>() as usize;
-                        let a = &mut module.memories[0].values[offset..offset+8];
-                        let value = a.read_int::<LittleEndian>(size).unwrap() as $c;
+                        let mut a = &module.memories[0].values[offset..offset+8];
+                        let value = a.read_int::<LittleEndian>(size).unwrap() as $d;
                         stack.push(ValueTypeProvider::$b(value));
                     };
 
-                    ($a:expr => $b:ident:$c:ident($d:expr), $e:expr) => {
-                        let offset = ($a.flags + $a.offset) as usize;
-                        let mut $b = &module.memories[0].values[offset..offset+$d as usize];
-                        stack.push(ValueTypeProvider::$c($e));
+                    ($a:expr => $b:ident($c:ty)) => {
+                        mem_op!($a => $b($c,$c));
                     };
 
-                    ($b:ident:$c:ident|$d:expr, $e:expr => $a:expr) => {
-                        let offset = ($a.flags + $a.offset) as usize;
-                        let mut $b = &mut module.memories[0].values[offset..offset+$d as usize];
-                        if let Some(ValueTypeProvider::$c(a)) = stack.pop() {
-                            $e
-                        } else {panic!("VTP was wrong type or not present");}
+                    ($a:ident($c:ty) => $d:expr) => {
+                        if let Some(ValueTypeProvider::$a(value)) = stack.pop() {
+                            let offset = ($d.flags + $d.offset) as usize;
+                            let size = std::mem::size_of::<$c>() as usize;
+                            let mut a = &mut module.memories[0].values[offset..offset+8];
+                            a.write_int::<LittleEndian>(value as $c as i64, size);
+                        } else {
+                            panic!("VTP was wrong type or not present!");
+                        }
                     };
                 }
 
@@ -350,30 +352,28 @@ impl RuntimeModule {
                             }
                         },
                         Operation::I32Load(ref mem) => {mem_op!(mem => I32(i32));},
-                        Operation::I64Load(ref mem) => {mem_op!(mem => a:I64(8), a.read_i64::<LittleEndian>().unwrap());},
-                        Operation::F32Load(ref mem) => {mem_op!(mem => a:F32(8), a.read_f32::<LittleEndian>().unwrap());},
-                        Operation::F64Load(ref mem) => {mem_op!(mem => a:F64(8), a.read_f64::<LittleEndian>().unwrap());},
-                        Operation::I32Load8S(ref mem) => {mem_op!(mem => a:I32(1), a.read_i8().unwrap() as i32);},
-                        Operation::I32Load8U(ref mem) => {mem_op!(mem => a:I32(1), a.read_u8().unwrap() as i32);},
-                        Operation::I32Load16S(ref mem) => {mem_op!(mem => a:I32(2), a.read_i16::<LittleEndian>().unwrap() as i32);},
-                        Operation::I32Load16U(ref mem) => {mem_op!(mem => a:I32(2), a.read_u16::<LittleEndian>().unwrap() as i32);},
-                        Operation::I64Load8S(ref mem) => {mem_op!(mem => a:I64(1), a.read_i8().unwrap() as i64);},
-                        Operation::I64Load8U(ref mem) => {mem_op!(mem => a:I64(1), a.read_u8().unwrap() as i64);},
-                        Operation::I64Load16S(ref mem) => {mem_op!(mem => a:I64(2), a.read_i16::<LittleEndian>().unwrap() as i64);},
-                        Operation::I64Load16U(ref mem) => {mem_op!(mem => a:I64(2), a.read_u16::<LittleEndian>().unwrap() as i64);},
-                        Operation::I64Load32S(ref mem) => {mem_op!(mem => a:I64(4), a.read_i32::<LittleEndian>().unwrap() as i64);},
-                        Operation::I64Load32U(ref mem) => {mem_op!(mem => a:I64(4), a.read_u32::<LittleEndian>().unwrap() as i64);},
-                        Operation::I32Store(ref mem) => {
-//                            mem_op!(a:I32|4, a.write_i32 => mem);
-                        },
-                        Operation::I64Store(ref mem) => {},
-                        Operation::F32Store(ref mem) => {},
-                        Operation::F64Store(ref mem) => {},
-                        Operation::I32Store8(ref mem) => {},
-                        Operation::I32Store16(ref mem) => {},
-                        Operation::I64Store8(ref mem) => {},
-                        Operation::I64Store16(ref mem) => {},
-                        Operation::I64Store32(ref mem) => {},
+                        Operation::I64Load(ref mem) => {mem_op!(mem => I64(i64));},
+                        Operation::F32Load(ref mem) => {mem_op!(mem => F32(f32));},
+                        Operation::F64Load(ref mem) => {mem_op!(mem => F64(f64));},
+                        Operation::I32Load8S(ref mem) => {mem_op!(mem => I32(i8,i32));},
+                        Operation::I32Load8U(ref mem) => {mem_op!(mem => I32(u8,i32));},
+                        Operation::I32Load16S(ref mem) => {mem_op!(mem => I32(i16,i32));},
+                        Operation::I32Load16U(ref mem) => {mem_op!(mem => I32(u16,i32));},
+                        Operation::I64Load8S(ref mem) => {mem_op!(mem => I64(i8,i64));},
+                        Operation::I64Load8U(ref mem) => {mem_op!(mem => I64(u8,i64));},
+                        Operation::I64Load16S(ref mem) => {mem_op!(mem => I64(i16,i64));},
+                        Operation::I64Load16U(ref mem) => {mem_op!(mem => I64(u16,i64));},
+                        Operation::I64Load32S(ref mem) => {mem_op!(mem => I64(i32,i64));},
+                        Operation::I64Load32U(ref mem) => {mem_op!(mem => I64(u32,i64));},
+                        Operation::I32Store(ref mem) => {mem_op!(I32(i32) => mem);},
+                        Operation::I64Store(ref mem) => {mem_op!(I64(i64) => mem);},
+                        Operation::F32Store(ref mem) => {mem_op!(F32(f32) => mem);},
+                        Operation::F64Store(ref mem) => {mem_op!(F64(f64) => mem);},
+                        Operation::I32Store8(ref mem) => {mem_op!(I32(i8) => mem);},
+                        Operation::I32Store16(ref mem) => {mem_op!(I32(i16) => mem);},
+                        Operation::I64Store8(ref mem) => {mem_op!(I64(i8) => mem);},
+                        Operation::I64Store16(ref mem) => {mem_op!(I64(i16) => mem);},
+                        Operation::I64Store32(ref mem) => {mem_op!(I64(i32) => mem);},
                         Operation::CurrentMemory(_) => {},
                         Operation::GrowMemory(_) => {},
                         Operation::I32Const(value) => {
