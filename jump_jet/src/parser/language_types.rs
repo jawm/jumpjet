@@ -6,6 +6,7 @@ use parser::byteorder::ReadBytesExt;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
+use parse_tree::language_types::Block;
 use parse_tree::language_types::BlockType;
 use parse_tree::language_types::BranchTable;
 use parse_tree::language_types::ExternalKind;
@@ -172,19 +173,13 @@ impl InitExpression {
 impl Operation {
 	pub fn parse_multiple(reader: &mut Read, module: &ParseModule) -> Result<Vec<Operation>, ParseError> {
 		let mut ops = vec![];
-		let mut ends_required = 1;
 		loop {
 			match Operation::parse(reader, module) {
 				Ok(operation) => {
-					match operation {
-						Operation::End => ends_required -= 1,
-						Operation::Block(_) | Operation::Loop(_) | Operation::If(_) => ends_required += 1,
-						_ => {}
-					}
-					ops.push(operation);
-					if ends_required == 0 {
+					if let Operation::End = operation {
 						break;
 					}
+					ops.push(operation);
 				},
 				Err(e) => {return Err(e);}
 			}
@@ -199,7 +194,7 @@ impl Operation {
 			// Control flow operators
 			0x00 => Ok(Operation::Unreachable),
 			0x01 => Ok(Operation::Nop),
-			0x02 => match BlockType::parse(reader, module) {
+			0x02 => match Block::parse(reader, module) {
 				Ok(block) => Ok(Operation::Block(block)),
 				Err(e) => Err(e)
 			},
@@ -562,6 +557,20 @@ impl Operation {
 			0xbf => Ok(Operation::F64ReinterpretI64),
 
 			_ => Err(ParseError::CustomError("Unknown opcode".to_string()))
+		}
+	}
+}
+
+impl Block {
+	pub fn parse(reader: &mut Read, module: &ParseModule) -> Result<Block, ParseError> {
+		let byte = reader.bytes().read_varint(7).unwrap();
+		let ops = Operation::parse_multiple(reader, module).unwrap();
+		if let Ok(value_type) = ValueType::get(byte) {
+			Ok(Block{block_type: BlockType::Value(value_type), operations: ops})
+		} else if byte == -0x40 {
+			Ok(Block{block_type: BlockType::Empty, operations:ops})
+		} else {
+			Err(ParseError::CustomError("Block type wasn't valid".to_string()))
 		}
 	}
 }

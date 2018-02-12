@@ -59,7 +59,7 @@ pub enum Operation {
     // control flow
     Unreachable,
     Nop,
-    Block(BlockType),
+    Block(Block),
     Loop(BlockType), // loop
     If(BlockType), // if
     Else, // else - TODO should have BlockType immediate?
@@ -264,6 +264,13 @@ pub struct MemoryImmediate {
 pub enum BlockType {
     Value(ValueType),
     Empty
+}
+
+#[derive(Clone)]
+#[derive(Debug)]
+pub struct Block {
+    pub block_type: BlockType,
+    pub operations: Vec<Operation>
 }
 
 #[derive(Clone)]
