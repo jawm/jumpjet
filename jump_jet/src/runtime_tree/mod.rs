@@ -279,8 +279,10 @@ pub struct ModuleInstance<'a> {
 }
 
 impl<'a> ModuleInstance<'a> {
-    pub fn exports(&self) -> Box<ExportObject> {
-        unimplemented!();
+    pub fn exports(&'a mut self) -> Box<ExportObject + 'a> {
+        Box::new(ExportObj {
+            module: self
+        })
     }
 }
 
