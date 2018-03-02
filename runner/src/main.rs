@@ -18,6 +18,6 @@ fn main() {
     imports.insert("env".to_string(), imports_env);
     let mut module = jump_jet::instantiate(&mut File::open("out.wasm").unwrap(), imports).unwrap();
     println!("parsed");
-    let rets = module.exports().call_fn("add", vec![ValueTypeProvider::I32(1), ValueTypeProvider::I32(-10)]);
+    let rets = module.instantiate().unwrap().exports().call_fn("add", vec![ValueTypeProvider::I32(1), ValueTypeProvider::I32(-10)]);
     println!("rets {:#?}", rets);
 }

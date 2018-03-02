@@ -3,7 +3,7 @@ use runtime_tree::ModuleInstance;
 use runtime_tree::ValueTypeProvider;
 
 pub struct ExportObj<'m> {
-    pub module: &'m mut ModuleInstance
+    pub module: &'m mut ModuleInstance<'m>
 }
 pub trait ExportObject {
     fn call_fn(&mut self, name: &str, args: Vec<ValueTypeProvider>) -> Vec<ValueTypeProvider>;

@@ -258,21 +258,27 @@ pub struct ModuleTemplate {
 impl ModuleTemplate {
     // TODO not ParseError
     pub fn instantiate(&self) -> Result<ModuleInstance, ParseError> {
-        unimplemented!();
+        Ok(ModuleInstance {
+            exports: HashMap::new(),
+            globals: vec![],
+            memories: vec![],
+            functions: &self.functions,
+            tables: vec![],
+        })
     }
 }
 
 
-pub struct ModuleInstance {
+pub struct ModuleInstance<'a> {
     // types: Vec<TypeDefinition>,
     exports: HashMap<String, ExternalKindInstance>,
     globals: Vec<RefCell<ValueTypeProvider>>,
     memories: Vec<RefCell<Memory>>,
-    functions: Vec<Func>, // TODO we might not need this?
+    functions: &'a Vec<Func>, // TODO we might not need this?
     tables: Vec<RefCell<Table>>
 }
 
-impl ModuleInstance {
+impl<'a> ModuleInstance<'a> {
     pub fn exports(&self) -> Box<ExportObject> {
         unimplemented!();
     }
