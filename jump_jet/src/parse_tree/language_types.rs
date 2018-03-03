@@ -18,7 +18,7 @@ pub enum LanguageType {
     EmptyBlock,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ExternalKind {
     Function(usize),
     Table(usize),

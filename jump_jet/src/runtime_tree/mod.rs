@@ -33,25 +33,17 @@ mod language_types;
 pub use runtime_tree::language_types::ExternalKindInstance;
 pub use runtime_tree::language_types::ValueTypeProvider;
 
-pub type Func = Box<Fn(RefMut<ModuleInstanceData>, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>;
+pub type Func = Box<Fn(&ModuleInstanceData, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>;
 
-pub struct RuntimeModule {
-    exports: HashMap<String, ExternalKindInstance>,
-    start_function: Option<usize>,
-    data: RefCell<ModuleInstanceData>
-}
-
-pub struct ModuleInstanceData {
-    types: Vec<TypeDefinition>,
-    globals: Vec<ValueTypeProvider>,
-    memories: Vec<Memory>,
-    functions: Vec<Func>,
-    tables: Vec<Table>
-}
-
-pub trait RuntimeModuleBuilder {
-    fn build(&self, imports: HashMap<String, HashMap<String, ExternalKindInstance>>) -> Result<RuntimeModule, ParseError>;
-}
+//pub struct RuntimeModule {
+//    exports: HashMap<String, ExternalKindInstance>,
+//    start_function: Option<usize>,
+//    data: RefCell<ModuleInstanceData>
+//}
+//
+//pub trait RuntimeModuleBuilder {
+//    fn build(&self, imports: HashMap<String, HashMap<String, ExternalKindInstance>>) -> Result<RuntimeModule, ParseError>;
+//}
 
 //impl RuntimeModuleBuilder for ParseModule {
 //    fn build(&self, imports: HashMap<String, HashMap<String, ExternalKindInstance>>) -> Result<RuntimeModule, ParseError> {
@@ -259,23 +251,39 @@ impl ModuleTemplate {
     // TODO not ParseError
     pub fn instantiate(&self) -> Result<ModuleInstance, ParseError> {
         Ok(ModuleInstance {
-            exports: HashMap::new(),
-            globals: vec![],
-            memories: vec![],
+            types: self.types.clone(),
+            exports: self.build_exports(),
+            globals: RefCell::new(vec![]),
+            memories: RefCell::new(vec![]),
             functions: &self.functions,
-            tables: vec![],
+            tables: RefCell::new(vec![]),
         })
     }
+
+    fn build_exports(&self) -> HashMap<String, ExternalKindInstance> {
+        let mut exports = HashMap::new();
+        for (key, value) in self.exports.iter() {
+            exports.insert(key.clone(), match *value {
+                ExternalKind::Function(f) => ExternalKindInstance::Function(Box::new(move |module, args|{
+                    println!("getting function {:?}/{:?}", f, module.functions.len());
+//                    unimplemented!()
+                    module.functions[f](module, args)
+                })),
+                _ => ExternalKindInstance::Memory(0)
+            });
+        }
+        exports
+    }
+
 }
 
-
 pub struct ModuleInstance<'a> {
-    // types: Vec<TypeDefinition>,
+    types: Vec<TypeDefinition>,
     exports: HashMap<String, ExternalKindInstance>,
-    globals: Vec<RefCell<ValueTypeProvider>>,
-    memories: Vec<RefCell<Memory>>,
+    globals: RefCell<Vec<ValueTypeProvider>>,
+    memories: RefCell<Vec<Memory>>,
     functions: &'a Vec<Func>, // TODO we might not need this?
-    tables: Vec<RefCell<Table>>
+    tables: RefCell<Vec<Table>>
 }
 
 impl<'a> ModuleInstance<'a> {
@@ -284,6 +292,24 @@ impl<'a> ModuleInstance<'a> {
             module: self
         })
     }
+
+    pub fn get_frame(&self) -> ModuleInstanceData {
+        ModuleInstanceData {
+            types: self.types.clone(),
+            globals: self.globals.borrow_mut(),
+            functions: self.functions,
+            memories: self.memories.borrow_mut(),
+            tables: self.tables.borrow_mut()
+        }
+    }
+}
+
+pub struct ModuleInstanceData<'a> {
+    types: Vec<TypeDefinition>,
+    globals: RefMut<'a, Vec<ValueTypeProvider>>,
+    memories: RefMut<'a, Vec<Memory>>,
+    functions: &'a Vec<Func>,
+    tables: RefMut<'a, Vec<Table>>
 }
 
 pub trait ModuleTemplateBuilder {
@@ -292,16 +318,43 @@ pub trait ModuleTemplateBuilder {
 }
 
 impl ModuleTemplateBuilder for ParseModule {
-    fn build(&self, imports: HashMap<String, HashMap<String, ExternalKindInstance>>) -> Result<ModuleTemplate, ParseError> {
+    fn build(&self, mut imports: HashMap<String, HashMap<String, ExternalKindInstance>>) -> Result<ModuleTemplate, ParseError> {
+        println!("{:?}", self.exports);
         Ok(ModuleTemplate {
-            exports: HashMap::new(),
-            functions: vec![],
+            exports: self.exports.clone(),
+            functions: self.build_functions(&mut imports),
             globals: vec![],
             memories: self.memories.clone(),
             start_function: None,
             tables: vec![],
             types: self.types.clone()
-
         })
+    }
+}
+
+impl ParseModule {
+    pub fn build_functions(&self, imports: &mut HashMap<String, HashMap<String, ExternalKindInstance>>) -> Vec<Func> {
+        let mut functions: Vec<Func> = vec![];
+        for imported_module in &(self.imports) {
+            for imported_item in imported_module.1.iter() {
+                if let ExternalKind::Function(ref f) = *imported_item.1 {
+                    if let Some(mut map) = imports.remove(imported_module.0) {
+                        if let Some(ExternalKindInstance::Function(f)) = map.remove(imported_item.0) {
+                            functions.push(f);
+                        }
+                    }
+                }
+            }
+        }
+        for func in self.function_signatures.iter().zip(self.function_bodies.iter()) {
+            functions.push(Box::new(move |module, args| {
+                println!("ayo in the function");
+
+
+                let rets = vec![];
+                return rets
+            }));
+        }
+        functions
     }
 }

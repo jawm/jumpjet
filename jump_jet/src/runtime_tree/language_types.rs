@@ -8,7 +8,7 @@ use parse_tree::types::TypeDefinition;
 use runtime_tree::byteorder::LittleEndian;
 use runtime_tree::byteorder::ReadBytesExt;
 use runtime_tree::byteorder::WriteBytesExt;
-use runtime_tree::RuntimeModule;
+//use runtime_tree::RuntimeModule;
 use runtime_tree::ModuleInstanceData;
 use runtime_tree::Func;
 

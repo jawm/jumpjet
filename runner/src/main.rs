@@ -21,8 +21,9 @@ fn main() {
     println!("Testing JumpJet");
     env_logger::init().unwrap();
     let imports = build_imports();
-    let mut module_template = jump_jet::instantiate(&mut File::open("out.wasm").unwrap(), imports).unwrap();
+    let module_template = jump_jet::instantiate(&mut File::open("out.wasm").unwrap(), imports).unwrap();
     let mut module_instance = module_template.instantiate().unwrap();
+    println!("hi");
     let rets = module_instance.exports().call_fn("add", vec![ValueTypeProvider::I32(1), ValueTypeProvider::I32(-10)]);
     println!("rets {:#?}", rets);
 }
