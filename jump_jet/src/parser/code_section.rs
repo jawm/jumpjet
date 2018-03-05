@@ -11,7 +11,7 @@ use parse_tree::ParseModule;
 // TODO finish implementing.
 pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseError> {
     debug!("Parsing code section");
-    let mut s = "".to_string();
+    let s = "".to_string();
     let count = reader.bytes().read_varuint(32).unwrap();
     for index in 0..count {
         let _body_size = reader.bytes().read_varuint(32).unwrap();

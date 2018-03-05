@@ -26,14 +26,14 @@ pub use runtime_tree::exports::ExportObject;
 
 mod globals;
 use runtime_tree::globals::Global;
-//use runtime_tree::language_types::StackFrame;
+use runtime_tree::language_types::StackFrame;
 
 mod language_types;
-//use runtime_tree::language_types::Execute;
+use runtime_tree::language_types::Execute;
 pub use runtime_tree::language_types::ExternalKindInstance;
 pub use runtime_tree::language_types::ValueTypeProvider;
 
-pub type Func = Box<Fn(&ModuleInstanceData, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>;
+pub type Func = Box<Fn(&mut ModuleInstanceData, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>;
 
 //pub struct RuntimeModule {
 //    exports: HashMap<String, ExternalKindInstance>,
@@ -347,12 +347,113 @@ impl ParseModule {
             }
         }
         for func in self.function_signatures.iter().zip(self.function_bodies.iter()) {
-            functions.push(Box::new(move |module, args| {
+
+            let &TypeDefinition::Func(ref signature) = &self.types[*func.0];
+            let body = func.1;
+            let args_size = signature.parameters.len();
+            let locals_size = body.locals.len();
+            let local_space_size = args_size + locals_size;
+
+            let mut locals = Vec::with_capacity(local_space_size);
+            locals.append(&mut signature.parameters.clone());
+            locals.append(&mut body.locals.clone());
+
+            let operations = body.code.clone();
+
+            let rets = signature.returns.clone();
+
+            let block_type = if rets.len() == 0 {
+                BlockType::Empty
+            } else {
+                BlockType::Value(rets.get(0).unwrap().clone())
+            };
+            let block = Block {
+                operations: operations.clone(),
+                block_type
+            };
+            functions.push(Box::new(move |mut module, args| {
                 println!("ayo in the function");
 
+                if args.len() != args_size {
+                    panic!("Wrong number of args provided");
+                }
+                let mut local_space: Vec<ValueTypeProvider> = Vec::with_capacity(local_space_size);
+                for (param, arg) in locals.iter().zip(args.iter()) {
+                    local_space.push(match *param {
+                        ValueType::I32 => {
+                            if let ValueTypeProvider::I32(val) = *arg {
+                                arg.clone()
+                            } else {
+                                panic!("wrong argument type provided");
+                            }
+                        },
+                        ValueType::I64 => {
+                            if let ValueTypeProvider::I64(val) = *arg {
+                                arg.clone()
+                            } else {
+                                panic!("wrong argument type provided");
+                            }
+                        },
+                        ValueType::F32 => {
+                            if let ValueTypeProvider::F32(val) = *arg {
+                                arg.clone()
+                            } else {
+                                panic!("wrong argument type provided");
+                            }
+                        },
+                        ValueType::F64 => {
+                            if let ValueTypeProvider::F64(val) = *arg {
+                                arg.clone()
+                            } else {
+                                panic!("wrong argument type provided");
+                            }
+                        },
+                    });
+                }
+                for l in &locals[args_size..local_space_size] {
+                    local_space.push(match *l {
+                        ValueType::I32 => ValueTypeProvider::I32(0),
+                        ValueType::I64 => ValueTypeProvider::I64(0),
+                        ValueType::F32 => ValueTypeProvider::F32(0.0),
+                        ValueType::F64 => ValueTypeProvider::F64(0.0),
+                    });
+                }
 
-                let rets = vec![];
-                return rets
+                let mut stack = vec![];
+
+                block.execute(&mut StackFrame {
+                    data: &mut module,
+                    locals: &mut local_space,
+                    stack: &mut stack
+                });
+
+                let mut results = vec![];
+                for ret in &rets {
+                    match *ret {
+                        ValueType::I32 => {
+                            if let Some(ValueTypeProvider::I32(i)) = stack.pop() {
+                                results.push(ValueTypeProvider::I32(i));
+                            }
+                        },
+                        ValueType::I64 => {
+                            if let Some(ValueTypeProvider::I64(i)) = stack.pop() {
+                                results.push(ValueTypeProvider::I64(i));
+                            }
+                        },
+                        ValueType::F32 => {
+                            if let Some(ValueTypeProvider::F32(i)) = stack.pop() {
+                                results.push(ValueTypeProvider::F32(i));
+                            }
+                        },
+                        ValueType::F64 => {
+                            if let Some(ValueTypeProvider::F64(i)) = stack.pop() {
+                                results.push(ValueTypeProvider::F64(i));
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+                return results;
             }));
         }
         functions
