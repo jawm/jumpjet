@@ -101,6 +101,23 @@ impl Execute for Block {
                     panic!("VTP was wrong type or not present!");
                 }
             };
+
+        }
+
+        macro_rules! wasm_if {
+            ($truthy:expr) => {
+                wasm_if!($truthy, {});
+            };
+
+            ($truthy:expr, $falsey:expr) => {
+                if let Some(ValueTypeProvider::I32(i)) = stack_frame.stack.pop() {
+                    if i != 0 {
+                        $truthy;
+                    } else {
+                        $falsey;
+                    }
+                }
+            };
         }
 
         for operation in &(self.operations) {
@@ -117,7 +134,7 @@ impl Execute for Block {
                 Operation::Else => {},
                 Operation::End => {break},
                 Operation::Branch(b) => {return b},
-                Operation::BranchIf(b) => {return b},
+                Operation::BranchIf(b) => {wasm_if!(return b);},
                 Operation::BranchTable(ref b) => {break;},
                 Operation::Return => {},
                 Operation::Call(i) => {},
@@ -162,7 +179,6 @@ impl Execute for Block {
                             let &Table::AnyFunc{ref limits, ref values} = &(data.tables)[0];
                             values.get(index as usize).unwrap().clone()
                         };
-
                         let callable = data.functions.get(fn_index).unwrap();
                         for ValueTypeProvider in callable(data, args) {
                             stack_frame.stack.push(ValueTypeProvider);

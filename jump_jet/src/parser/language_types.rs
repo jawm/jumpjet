@@ -23,6 +23,7 @@ use parse_tree::ParseModule;
 impl ValueType {
 	pub fn parse<R: Read>(bytes: &mut Bytes<R>) -> Result<ValueType, ParseError> {
 		let read = bytes.read_varint(7).unwrap();
+		debug!("Value type {:X}", read);
 		ValueType::get(read)
 	}
 
