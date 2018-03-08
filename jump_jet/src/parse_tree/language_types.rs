@@ -64,8 +64,8 @@ pub enum Operation {
     If(BlockType), // if
     Else, // else - TODO should have BlockType immediate?
     End,
-    Branch(u32), // varuint32 | break from block
-    BranchIf(u32), // varuint32 | break if condition
+    Branch(i32), // varuint32 | break from block
+    BranchIf(i32), // varuint32 | break if condition
     BranchTable(BranchTable), // br_table
     Return, // return
 

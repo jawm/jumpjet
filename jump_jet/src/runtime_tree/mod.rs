@@ -8,6 +8,7 @@ use std::cell::RefCell;
 use std::cell::RefMut;
 use std::collections::HashMap;
 
+use parse_tree::functions::FuncSignature;
 use parse_tree::language_types::Block;
 use parse_tree::language_types::BlockType;
 use parse_tree::language_types::ExternalKind;
@@ -29,11 +30,16 @@ use runtime_tree::globals::Global;
 use runtime_tree::language_types::StackFrame;
 
 mod language_types;
+pub use runtime_tree::language_types::Import;
 use runtime_tree::language_types::Execute;
 pub use runtime_tree::language_types::ExternalKindInstance;
 pub use runtime_tree::language_types::ValueTypeProvider;
 
-pub type Func = Box<Fn(&mut ModuleInstanceData, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>;
+//pub type Func = Box<Fn(&mut ModuleInstanceData, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>;
+pub struct Func {
+    signature: FuncSignature,
+    callable: Box<Fn(&mut ModuleInstanceData, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>
+}
 
 //pub struct RuntimeModule {
 //    exports: HashMap<String, ExternalKindInstance>,
@@ -264,11 +270,14 @@ impl ModuleTemplate {
         let mut exports = HashMap::new();
         for (key, value) in self.exports.iter() {
             exports.insert(key.clone(), match *value {
-                ExternalKind::Function(f) => ExternalKindInstance::Function(Box::new(move |module, args|{
-                    println!("getting function {:?}/{:?}", f, module.functions.len());
-//                    unimplemented!()
-                    module.functions[f](module, args)
-                })),
+                ExternalKind::Function(f) => ExternalKindInstance::Function(
+                    Func{
+                        signature: self.functions[f].signature.clone(),
+                        callable: Box::new(move |module, args|{
+                            println!("getting function {:?}/{:?}", f, module.functions.len());
+                            (module.functions[f].callable)(module, args)
+                    })}
+                ),
                 _ => ExternalKindInstance::Memory(0)
             });
         }
@@ -314,11 +323,11 @@ pub struct ModuleInstanceData<'a> {
 
 pub trait ModuleTemplateBuilder {
     // TODO don't use ParseError
-    fn build(&self, imports: HashMap<String, HashMap<String, ExternalKindInstance>>) -> Result<ModuleTemplate, ParseError>;
+    fn build(&self, imports: HashMap<String, HashMap<String, Import>>) -> Result<ModuleTemplate, ParseError>;
 }
 
 impl ModuleTemplateBuilder for ParseModule {
-    fn build(&self, mut imports: HashMap<String, HashMap<String, ExternalKindInstance>>) -> Result<ModuleTemplate, ParseError> {
+    fn build(&self, mut imports: HashMap<String, HashMap<String, Import>>) -> Result<ModuleTemplate, ParseError> {
         println!("{:?}", self.exports);
         Ok(ModuleTemplate {
             exports: self.exports.clone(),
@@ -333,14 +342,21 @@ impl ModuleTemplateBuilder for ParseModule {
 }
 
 impl ParseModule {
-    pub fn build_functions(&self, imports: &mut HashMap<String, HashMap<String, ExternalKindInstance>>) -> Vec<Func> {
+    pub fn build_functions(&self, imports: &mut HashMap<String, HashMap<String, Import>>) -> Vec<Func> {
         let mut functions: Vec<Func> = vec![];
         for imported_module in &(self.imports) {
             for imported_item in imported_module.1.iter() {
-                if let ExternalKind::Function(ref f) = *imported_item.1 {
+                if let ExternalKind::Function(signature_idx) = *imported_item.1 {
                     if let Some(mut map) = imports.remove(imported_module.0) {
-                        if let Some(ExternalKindInstance::Function(f)) = map.remove(imported_item.0) {
-                            functions.push(f);
+                        if let Some(Import::Function(f)) = map.remove(imported_item.0) {
+                            match self.types[signature_idx].clone() {
+                                TypeDefinition::Func(signature) => {
+                                    functions.push(Func {
+                                        signature,
+                                        callable: f
+                                    });
+                                }
+                            }
                         }
                     }
                 }
@@ -371,7 +387,9 @@ impl ParseModule {
                 operations: operations.clone(),
                 block_type
             };
-            functions.push(Box::new(move |mut module, args| {
+            functions.push(Func{
+                signature: signature.clone(),
+                callable: Box::new(move |mut module, args| {
                 println!("ayo in the function");
 
                 if args.len() != args_size {
@@ -454,7 +472,7 @@ impl ParseModule {
                     }
                 }
                 return results;
-            }));
+            })});
         }
         functions
     }

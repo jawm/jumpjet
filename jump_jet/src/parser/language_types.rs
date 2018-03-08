@@ -23,7 +23,7 @@ use parse_tree::ParseModule;
 impl ValueType {
 	pub fn parse<R: Read>(bytes: &mut Bytes<R>) -> Result<ValueType, ParseError> {
 		let read = bytes.read_varint(7).unwrap();
-		debug!("Value type {:X}", read);
+		debug!("Value type ");
 		ValueType::get(read)
 	}
 
@@ -209,8 +209,8 @@ impl Operation {
 			},
 			0x05 => Ok(Operation::Else),
 			0x0b => Ok(Operation::End),
-			0x0c => Ok(Operation::Branch(reader.bytes().read_varuint(32).unwrap() as u32)),
-			0x0d => Ok(Operation::BranchIf(reader.bytes().read_varuint(32).unwrap() as u32)),
+			0x0c => Ok(Operation::Branch(reader.bytes().read_varuint(32).unwrap() as i32)),
+			0x0d => Ok(Operation::BranchIf(reader.bytes().read_varuint(32).unwrap() as i32)),
 			0x0e => {
 				match BranchTable::parse(reader, module) {
 					Ok(branch_table) => Ok(Operation::BranchTable(branch_table)),
@@ -564,15 +564,9 @@ impl Operation {
 
 impl Block {
 	pub fn parse(reader: &mut Read, module: &ParseModule) -> Result<Block, ParseError> {
-		let byte = reader.bytes().read_varint(7).unwrap();
-		let ops = Operation::parse_multiple(reader, module).unwrap();
-		if let Ok(value_type) = ValueType::get(byte) {
-			Ok(Block{block_type: BlockType::Value(value_type), operations: ops})
-		} else if byte == -0x40 {
-			Ok(Block{block_type: BlockType::Empty, operations:ops})
-		} else {
-			Err(ParseError::CustomError("Block type wasn't valid".to_string()))
-		}
+		let block_type = BlockType::parse(reader, module).unwrap();
+		let operations = Operation::parse_multiple(reader, module).unwrap();
+		Ok(Block{block_type, operations})
 	}
 }
 

@@ -22,6 +22,13 @@ pub enum ExternalKindInstance {
     Global(usize),
 }
 
+pub enum Import {
+    Function(Box<Fn(&mut ModuleInstanceData, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>),
+    Table(usize),
+    Memory(usize),
+    Global(usize),
+}
+
 #[derive(Debug, Clone)]
 pub enum ValueTypeProvider {
     I32(i32),
@@ -37,11 +44,11 @@ pub struct StackFrame<'b, 'a: 'b> {
 }
 
 pub trait Execute {
-    fn execute(&self, &mut StackFrame) -> u32;
+    fn execute(&self, &mut StackFrame) -> i32;
 }
 
 impl Execute for Block {
-    fn execute(&self, stack_frame: &mut StackFrame) -> u32 {
+    fn execute(&self, stack_frame: &mut StackFrame) -> i32 {
 
         println!("Executing operations");
         let stack_size = stack_frame.stack.len();
@@ -112,8 +119,10 @@ impl Execute for Block {
             ($truthy:expr, $falsey:expr) => {
                 if let Some(ValueTypeProvider::I32(i)) = stack_frame.stack.pop() {
                     if i != 0 {
+                        println!("truthy {:?}", i);
                         $truthy;
                     } else {
+                        println!("falsey {:?}", i);
                         $falsey;
                     }
                 }
@@ -130,14 +139,54 @@ impl Execute for Block {
                     if x != 0 { return x-1}
                 },
                 Operation::Loop(ref b) => {},
-                Operation::If(ref b) => {},
+                Operation::If(ref b) => {wasm_if!({});},
                 Operation::Else => {},
                 Operation::End => {break},
                 Operation::Branch(b) => {return b},
-                Operation::BranchIf(b) => {wasm_if!(return b);},
+                Operation::BranchIf(b) => {wasm_if!({return b});},
                 Operation::BranchTable(ref b) => {break;},
-                Operation::Return => {},
-                Operation::Call(i) => {},
+                Operation::Call(index) => {
+                    let data = &mut stack_frame.data;
+                    let function = data.functions.get(index).unwrap();
+                    let mut args = vec![];
+                    for param in &(function.signature.parameters) {
+                        match *param {
+                            ValueType::I32 => {
+                                if let Some(ValueTypeProvider::I32(v)) = stack_frame.stack.pop() {
+                                    args.push(ValueTypeProvider::I32(v));
+                                } else {
+                                    panic!("wrong argument type");
+                                }
+                            },
+                            ValueType::I64 => {
+                                if let Some(ValueTypeProvider::I64(v)) = stack_frame.stack.pop() {
+                                    args.push(ValueTypeProvider::I64(v));
+                                } else {
+                                    panic!("wrong argument type");
+                                }
+                            },
+                            ValueType::F32 => {
+                                if let Some(ValueTypeProvider::F32(v)) = stack_frame.stack.pop() {
+                                    args.push(ValueTypeProvider::F32(v));
+                                } else {
+                                    panic!("wrong argument type");
+                                }
+                            },
+                            ValueType::F64 => {
+                                if let Some(ValueTypeProvider::F64(v)) = stack_frame.stack.pop() {
+                                    args.push(ValueTypeProvider::F64(v));
+                                } else {
+                                    panic!("wrong argument type");
+                                }
+                            },
+                        }
+                    }
+                    println!("{:?}", function.signature);
+                    for ValueTypeProvider in (function.callable)(data, args) {
+                        stack_frame.stack.push(ValueTypeProvider);
+                    }
+                },
+                Operation::Return => {return -1;}, //TODO FIX THIS !! TODO TODO TODO
                 Operation::CallIndirect(idx, _) => {
                     let data = &mut stack_frame.data;
                     let TypeDefinition::Func(ref signature) = data.types[idx].clone();
@@ -179,7 +228,7 @@ impl Execute for Block {
                             let &Table::AnyFunc{ref limits, ref values} = &(data.tables)[0];
                             values.get(index as usize).unwrap().clone()
                         };
-                        let callable = data.functions.get(fn_index).unwrap();
+                        let callable = &data.functions.get(fn_index).unwrap().callable;
                         for ValueTypeProvider in callable(data, args) {
                             stack_frame.stack.push(ValueTypeProvider);
                         }

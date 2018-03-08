@@ -6,6 +6,7 @@ use parser::ModuleParser;
 use parser::ParseError;
 
 use runtime_tree::ExternalKindInstance;
+use runtime_tree::Import;
 use runtime_tree::ModuleTemplate;
 use runtime_tree::ModuleTemplateBuilder;
 
@@ -14,7 +15,7 @@ pub mod exports;
 pub mod language_types;
 pub mod functions;
 
-pub fn instantiate(reader: &mut Read, imports: HashMap<String, HashMap<String, ExternalKindInstance>>) -> Result<ModuleTemplate, ParseError> {
+pub fn instantiate(reader: &mut Read, imports: HashMap<String, HashMap<String, Import>>) -> Result<ModuleTemplate, ParseError> {
     info!("Attempting to parse WebAssembly module");
     let parser = ModuleParser::default();
     parser.parse_module(reader).unwrap().build(imports)
