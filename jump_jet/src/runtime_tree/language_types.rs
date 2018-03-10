@@ -23,6 +23,7 @@ pub enum ExternalKindInstance {
 }
 
 pub enum Import {
+    //TODO imported functions probably shouldn't get access to ModuleInstanceData. Wrap it in another closure that swallows that.
     Function(Box<Fn(&mut ModuleInstanceData, Vec<ValueTypeProvider>)->Vec<ValueTypeProvider>>),
     Table(usize),
     Memory(usize),
