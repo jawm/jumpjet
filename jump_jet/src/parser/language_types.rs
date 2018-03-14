@@ -203,7 +203,7 @@ impl Operation {
 				Ok(block) => Ok(Operation::Loop(block)),
 				Err(e) => Err(e)
 			},
-			0x04 => match BlockType::parse(reader, module) {
+			0x04 => match Block::parse(reader, module) {
 				Ok(block) => Ok(Operation::If(block)),
 				Err(e) => Err(e)
 			},
@@ -603,5 +603,71 @@ impl MemoryImmediate {
 		let flags = reader.bytes().read_varuint(32).unwrap() as u32;
 		let offset = reader.bytes().read_varuint(32).unwrap() as u32;
 		Ok(MemoryImmediate{flags, offset})
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use std::collections::HashMap;
+	use std::io::{Bytes, Cursor, Read};
+
+	macro_rules! b {
+		($($byte:expr) *) => {
+
+			&mut Cursor::new(&[$($byte,)*].to_vec())
+		}
+	}
+
+	fn p() -> ParseModule {
+		ParseModule {
+			version: 1,
+			exports: HashMap::new(),
+			function_bodies: vec![],
+			function_signatures: vec![],
+			globals: vec![],
+			imports: HashMap::new(),
+			memories: vec![],
+			tables: vec![],
+			types: vec![],
+			start_function: None
+		}
+	}
+
+	#[test]
+	fn reads_unreachable() {
+		let ops = Operation::parse_multiple(b!(0x00 0x0b), &p()).unwrap();
+		assert_eq!(ops, vec![Operation::Unreachable]);
+	}
+
+	#[test]
+	fn end_stops_parsing() {
+		// check that the 'end' opcode stops parsing, even if there is more yet to read
+		let ops = Operation::parse_multiple(b!(0x0b 0x0b), &p()).unwrap();
+		assert_eq!(ops, vec![]);
+	}
+
+	#[test]
+	fn read_if_statement() {
+		let ops = Operation::parse_multiple(b!(0x04 0x40 0x0b 0x0b), &p()).unwrap();
+		assert_eq!(ops, vec![Operation::If(Block {block_type: BlockType::Empty, operations: vec![]})]);
+	}
+
+	#[test]
+	fn read_if_else() {
+		let ops = Operation::parse_multiple(b!(0x04 0x40 0x05 0x0b 0x0b), &p()).unwrap();
+		assert_eq!(ops, vec![Operation::If(Block {block_type: BlockType::Empty, operations: vec![
+			Operation::Else
+		]})]);
+	}
+
+	#[test]
+	fn read_if_else_i32() {
+		let ops = Operation::parse_multiple(b!(0x04 0x7f 0x41 0x03 0x05 0x41 0x06 0x0b 0x0b), &p()).unwrap();
+		assert_eq!(ops, vec![Operation::If(Block {block_type: BlockType::Value(ValueType::I32), operations: vec![
+			Operation::I32Const(3),
+			Operation::Else,
+			Operation::I32Const(6)
+		]})]);
 	}
 }

@@ -55,13 +55,14 @@ pub enum InitExpression {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum Operation {
     // control flow
     Unreachable,
     Nop,
     Block(Block),
     Loop(BlockType), // loop
-    If(BlockType), // if
+    If(Block), // if
     Else, // else - TODO should have BlockType immediate?
     End,
     Branch(i32), // varuint32 | break from block
@@ -254,6 +255,7 @@ pub enum Operation {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub struct MemoryImmediate {
     pub flags: u32, // varuint32 - i have no idea what this is
     pub offset: u32,
@@ -261,6 +263,7 @@ pub struct MemoryImmediate {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum BlockType {
     Value(ValueType),
     Empty
@@ -268,6 +271,7 @@ pub enum BlockType {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub struct Block {
     pub block_type: BlockType,
     pub operations: Vec<Operation>
@@ -275,6 +279,7 @@ pub struct Block {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub struct BranchTable {
     pub targets: Vec<u32>, // varuint32, possibly change to Vec<BlockType>
     pub default: usize,

@@ -30,7 +30,7 @@ pub enum Import {
     Global(usize),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ValueTypeProvider {
     I32(i32),
     I64(i64),
@@ -119,6 +119,7 @@ impl Execute for Block {
 
             ($truthy:expr, $falsey:expr) => {
                 if let Some(ValueTypeProvider::I32(i)) = stack_frame.stack.pop() {
+                    println!("{:?}", i);
                     if i != 0 {
                         println!("truthy {:?}", i);
                         $truthy;
@@ -140,8 +141,16 @@ impl Execute for Block {
                     if x != 0 { return x-1}
                 },
                 Operation::Loop(ref b) => {},
-                Operation::If(ref b) => {wasm_if!({});},
-                Operation::Else => {},
+                Operation::If(ref b) => {println!("calling if"); wasm_if!({
+                    b.execute(stack_frame);
+                }, {
+                    let index = b.operations.iter().position(|r|r == &Operation::Else).unwrap();
+                    Block {
+                        block_type: b.block_type.clone(),
+                        operations: b.operations.clone().split_off(index+1)
+                    }.execute(stack_frame);
+                });},
+                Operation::Else => {break},
                 Operation::End => {break},
                 Operation::Branch(b) => {return b},
                 Operation::BranchIf(b) => {wasm_if!({return b});},
@@ -449,4 +458,82 @@ impl Execute for Block {
         }
         0
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+    use parse_tree::language_types::BlockType;
+
+    macro_rules! sf {
+        ($a:ident) => {
+            let functions = vec![];
+            let globals = RefCell::new(vec![]);
+            let memories = RefCell::new(vec![]);
+            let tables = RefCell::new(vec![]);
+            let mut $a = StackFrame {
+                data: &mut ModuleInstanceData {
+                    functions: &functions,
+                    globals: globals.borrow_mut(),
+                    memories: memories.borrow_mut(),
+                    tables: tables.borrow_mut(),
+                    types: vec![]
+                },
+                locals: &mut vec![],
+                stack: &mut vec![]
+            };
+        }
+    }
+
+    #[test]
+    fn if_true_i32() {
+        sf!(sf);
+        let block = Block {
+            block_type: BlockType::Value(ValueType::I32),
+            operations: vec![
+                Operation::I32Const(1),
+                Operation::If(Block {
+                    block_type: BlockType::Empty,
+                    operations: vec![
+                        Operation::I32Const(3),
+                        Operation::I32Const(3),
+                        Operation::I32Add,
+                        Operation::Else,
+                        Operation:: I32Const(42),
+                        Operation::End
+                    ]
+                }),
+                Operation::End
+            ]
+        };
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(6)]);
+    }
+
+    #[test]
+    fn if_false_else_i32() {
+        sf!(sf);
+        let block = Block {
+            block_type: BlockType::Value(ValueType::I32),
+            operations: vec![
+                Operation::I32Const(0),
+                Operation::If(Block {
+                    block_type: BlockType::Empty,
+                    operations: vec![
+                        Operation::I32Const(6),
+                        Operation::I32Const(3),
+                        Operation::I32Add,
+                        Operation::Else,
+                        Operation:: I32Const(42),
+                        Operation::End
+                    ]
+                }),
+                Operation::End
+            ]
+        };
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
+    }
+
 }
