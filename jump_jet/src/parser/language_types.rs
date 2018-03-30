@@ -6,6 +6,7 @@ use parser::byteorder::ReadBytesExt;
 use parser::leb::ReadLEB;
 use parser::ParseError;
 
+use parse_tree::language_types::Block;
 use parse_tree::language_types::BlockType;
 use parse_tree::language_types::BranchTable;
 use parse_tree::language_types::ExternalKind;
@@ -22,6 +23,7 @@ use parse_tree::ParseModule;
 impl ValueType {
 	pub fn parse<R: Read>(bytes: &mut Bytes<R>) -> Result<ValueType, ParseError> {
 		let read = bytes.read_varint(7).unwrap();
+		debug!("Value type ");
 		ValueType::get(read)
 	}
 
@@ -172,19 +174,13 @@ impl InitExpression {
 impl Operation {
 	pub fn parse_multiple(reader: &mut Read, module: &ParseModule) -> Result<Vec<Operation>, ParseError> {
 		let mut ops = vec![];
-		let mut ends_required = 1;
 		loop {
 			match Operation::parse(reader, module) {
 				Ok(operation) => {
-					match operation {
-						Operation::End => ends_required -= 1,
-						Operation::Block(_) | Operation::Loop(_) | Operation::If(_) => ends_required += 1,
-						_ => {}
-					}
-					ops.push(operation);
-					if ends_required == 0 {
+					if let Operation::End = operation {
 						break;
 					}
+					ops.push(operation);
 				},
 				Err(e) => {return Err(e);}
 			}
@@ -199,7 +195,7 @@ impl Operation {
 			// Control flow operators
 			0x00 => Ok(Operation::Unreachable),
 			0x01 => Ok(Operation::Nop),
-			0x02 => match BlockType::parse(reader, module) {
+			0x02 => match Block::parse(reader, module) {
 				Ok(block) => Ok(Operation::Block(block)),
 				Err(e) => Err(e)
 			},
@@ -207,14 +203,14 @@ impl Operation {
 				Ok(block) => Ok(Operation::Loop(block)),
 				Err(e) => Err(e)
 			},
-			0x04 => match BlockType::parse(reader, module) {
+			0x04 => match Block::parse(reader, module) {
 				Ok(block) => Ok(Operation::If(block)),
 				Err(e) => Err(e)
 			},
 			0x05 => Ok(Operation::Else),
 			0x0b => Ok(Operation::End),
-			0x0c => Ok(Operation::Branch(reader.bytes().read_varuint(32).unwrap() as u32)),
-			0x0d => Ok(Operation::BranchIf(reader.bytes().read_varuint(32).unwrap() as u32)),
+			0x0c => Ok(Operation::Branch(reader.bytes().read_varuint(32).unwrap() as i32)),
+			0x0d => Ok(Operation::BranchIf(reader.bytes().read_varuint(32).unwrap() as i32)),
 			0x0e => {
 				match BranchTable::parse(reader, module) {
 					Ok(branch_table) => Ok(Operation::BranchTable(branch_table)),
@@ -566,6 +562,14 @@ impl Operation {
 	}
 }
 
+impl Block {
+	pub fn parse(reader: &mut Read, module: &ParseModule) -> Result<Block, ParseError> {
+		let block_type = BlockType::parse(reader, module).unwrap();
+		let operations = Operation::parse_multiple(reader, module).unwrap();
+		Ok(Block{block_type, operations})
+	}
+}
+
 impl BlockType {
 	pub fn parse(reader: &mut Read, module: &ParseModule) -> Result<BlockType, ParseError> {
 		let byte = reader.bytes().read_varint(7).unwrap();
@@ -599,5 +603,71 @@ impl MemoryImmediate {
 		let flags = reader.bytes().read_varuint(32).unwrap() as u32;
 		let offset = reader.bytes().read_varuint(32).unwrap() as u32;
 		Ok(MemoryImmediate{flags, offset})
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use std::collections::HashMap;
+	use std::io::{Bytes, Cursor, Read};
+
+	macro_rules! b {
+		($($byte:expr) *) => {
+
+			&mut Cursor::new(&[$($byte,)*].to_vec())
+		}
+	}
+
+	fn p() -> ParseModule {
+		ParseModule {
+			version: 1,
+			exports: HashMap::new(),
+			function_bodies: vec![],
+			function_signatures: vec![],
+			globals: vec![],
+			imports: HashMap::new(),
+			memories: vec![],
+			tables: vec![],
+			types: vec![],
+			start_function: None
+		}
+	}
+
+	#[test]
+	fn reads_unreachable() {
+		let ops = Operation::parse_multiple(b!(0x00 0x0b), &p()).unwrap();
+		assert_eq!(ops, vec![Operation::Unreachable]);
+	}
+
+	#[test]
+	fn end_stops_parsing() {
+		// check that the 'end' opcode stops parsing, even if there is more yet to read
+		let ops = Operation::parse_multiple(b!(0x0b 0x0b), &p()).unwrap();
+		assert_eq!(ops, vec![]);
+	}
+
+	#[test]
+	fn read_if_statement() {
+		let ops = Operation::parse_multiple(b!(0x04 0x40 0x0b 0x0b), &p()).unwrap();
+		assert_eq!(ops, vec![Operation::If(Block {block_type: BlockType::Empty, operations: vec![]})]);
+	}
+
+	#[test]
+	fn read_if_else() {
+		let ops = Operation::parse_multiple(b!(0x04 0x40 0x05 0x0b 0x0b), &p()).unwrap();
+		assert_eq!(ops, vec![Operation::If(Block {block_type: BlockType::Empty, operations: vec![
+			Operation::Else
+		]})]);
+	}
+
+	#[test]
+	fn read_if_else_i32() {
+		let ops = Operation::parse_multiple(b!(0x04 0x7f 0x41 0x03 0x05 0x41 0x06 0x0b 0x0b), &p()).unwrap();
+		assert_eq!(ops, vec![Operation::If(Block {block_type: BlockType::Value(ValueType::I32), operations: vec![
+			Operation::I32Const(3),
+			Operation::Else,
+			Operation::I32Const(6)
+		]})]);
 	}
 }

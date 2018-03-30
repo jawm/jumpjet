@@ -104,7 +104,7 @@ impl ModuleParser {
             };
             self.parse_sections(&mut module, &mut reader)?;
             info!("parsed module");
-            debug!("module structure {:#?}", module);
+            println!("module structure {:#?}", module);
             return Ok(module)
         }
     }

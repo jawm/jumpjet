@@ -18,7 +18,7 @@ pub enum LanguageType {
     EmptyBlock,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ExternalKind {
     Function(usize),
     Table(usize),
@@ -55,17 +55,18 @@ pub enum InitExpression {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum Operation {
     // control flow
     Unreachable,
     Nop,
-    Block(BlockType),
+    Block(Block),
     Loop(BlockType), // loop
-    If(BlockType), // if
+    If(Block), // if
     Else, // else - TODO should have BlockType immediate?
     End,
-    Branch(u32), // varuint32 | break from block
-    BranchIf(u32), // varuint32 | break if condition
+    Branch(i32), // varuint32 | break from block
+    BranchIf(i32), // varuint32 | break if condition
     BranchTable(BranchTable), // br_table
     Return, // return
 
@@ -254,6 +255,7 @@ pub enum Operation {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub struct MemoryImmediate {
     pub flags: u32, // varuint32 - i have no idea what this is
     pub offset: u32,
@@ -261,6 +263,7 @@ pub struct MemoryImmediate {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum BlockType {
     Value(ValueType),
     Empty
@@ -268,6 +271,15 @@ pub enum BlockType {
 
 #[derive(Clone)]
 #[derive(Debug)]
+#[derive(PartialEq)]
+pub struct Block {
+    pub block_type: BlockType,
+    pub operations: Vec<Operation>
+}
+
+#[derive(Clone)]
+#[derive(Debug)]
+#[derive(PartialEq)]
 pub struct BranchTable {
     pub targets: Vec<u32>, // varuint32, possibly change to Vec<BlockType>
     pub default: usize,

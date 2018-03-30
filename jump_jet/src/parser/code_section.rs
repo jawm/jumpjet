@@ -11,13 +11,15 @@ use parse_tree::ParseModule;
 // TODO finish implementing.
 pub fn parse(reader: &mut Read, module: &mut ParseModule) -> Result<(), ParseError> {
     debug!("Parsing code section");
-    let mut s = "".to_string();
+    let s = "".to_string();
     let count = reader.bytes().read_varuint(32).unwrap();
     for index in 0..count {
         let _body_size = reader.bytes().read_varuint(32).unwrap();
+        println!("body {} has size {}", index, _body_size);
+//        if index == 4 {reader.bytes().take(_body_size as usize).for_each(|x|print!("{:X} ", x.unwrap()));println!();}
         let local_count = reader.bytes().read_varuint(32).unwrap();
         let mut locals = vec![];
-        debug!("about to parse locals");
+        debug!("about to parse {} locals", local_count);
         for _ in 0..local_count {
             let local_quantity = reader.bytes().read_varuint(32).unwrap() as usize;
             let local_type = ValueType::parse(&mut reader.bytes())?;
