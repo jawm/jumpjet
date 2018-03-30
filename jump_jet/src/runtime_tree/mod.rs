@@ -6,6 +6,7 @@ use self::byteorder::WriteBytesExt;
 use std;
 use std::collections::HashMap;
 
+use parse_tree::language_types::BlockType;
 use parse_tree::language_types::ExternalKind;
 use parse_tree::language_types::Operation;
 use parse_tree::language_types::ValueType;
@@ -180,6 +181,7 @@ impl RuntimeModule {
                 }
 
                 let mut stack = vec![];
+                let mut control_flow_stack: Vec<(usize, BlockType)> = vec![];
 
                 macro_rules! op {
                     ($($a:ident:$b:ident),* | $r:ident => $op:expr) => {
@@ -244,16 +246,22 @@ impl RuntimeModule {
                         Operation::Nop => {},
                         Operation::Block(ref b) => {
                             // TODO maybe do stuff recursively here, because I'm lazy af
+                            // push (stacksize, signature) onto the control flow stack
+                            control_flow_stack.push((0, stack.len(), b.clone()));
                         },
-                        Operation::Loop(ref b) => {},
-                        Operation::If(ref b) => {},
+                        Operation::Loop(ref b) => {control_flow_stack.push((stack.len(), b.clone()));},
+                        Operation::If(ref b) => {control_flow_stack.push((stack.len(), b.clone()));},
                         Operation::Else => {},
                         Operation::End => {break},
-                        Operation::Branch(i) => {},
+                        Operation::Branch(i) => {
+                            
+                        },
                         Operation::BranchIf(i) => {},
                         Operation::BranchTable(ref bt) => {},
                         Operation::Return => {},
-                        Operation::Call(i) => {},
+                        Operation::Call(i) => {
+
+                        },
                         Operation::CallIndirect(idx, _) => {
                             let &TypeDefinition::Func(ref signature) = &(module.types)[idx];
                             let mut args = vec![];
@@ -374,8 +382,12 @@ impl RuntimeModule {
                         Operation::I64Store8(ref mem) => {mem_op!(I64(i8) => mem);},
                         Operation::I64Store16(ref mem) => {mem_op!(I64(i16) => mem);},
                         Operation::I64Store32(ref mem) => {mem_op!(I64(i32) => mem);},
-                        Operation::CurrentMemory(_) => {},
-                        Operation::GrowMemory(_) => {},
+                        Operation::CurrentMemory(_) => {
+                            stack.push(ValueTypeProvider::I32(module.memories[0].size()));
+                        },
+                        Operation::GrowMemory(_) => {
+                            stack.push(ValueTypeProvider::I32(module.memories[0].grow()));
+                        },
                         Operation::I32Const(value) => {stack.push(ValueTypeProvider::I32(value))},
                         Operation::I64Const(value) => {stack.push(ValueTypeProvider::I64(value))},
                         Operation::F32Const(value) => {stack.push(ValueTypeProvider::F32(value))},
