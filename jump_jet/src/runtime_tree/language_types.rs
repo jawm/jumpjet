@@ -321,10 +321,10 @@ impl Execute for Block {
                 Operation::I64Store16(ref mem) => {mem_op!(I64(i16) => mem);},
                 Operation::I64Store32(ref mem) => {mem_op!(I64(i32) => mem);},
                 Operation::CurrentMemory(_) => {
-                    stack.push(ValueTypeProvider::I32(module.memories[0].size()));
+                    stack_frame.stack.push(ValueTypeProvider::I32(stack_frame.data.memories[0].size()));
                 },
                 Operation::GrowMemory(_) => {
-                    stack.push(ValueTypeProvider::I32(module.memories[0].grow()));
+                    stack_frame.stack.push(ValueTypeProvider::I32(stack_frame.data.memories[0].grow()));
                 },
                 Operation::I32Const(value) => {stack_frame.stack.push(ValueTypeProvider::I32(value))},
                 Operation::I64Const(value) => {stack_frame.stack.push(ValueTypeProvider::I64(value))},
