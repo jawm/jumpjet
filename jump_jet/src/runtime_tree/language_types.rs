@@ -487,6 +487,18 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn unreachable_panics() {
+        sf!(sf);
+        let block = Block {
+            block_type: BlockType::Value(ValueType::I32),
+            operations: vec![Operation::Unreachable]
+        };
+        block.execute(&mut sf);
+    }
+
+
+    #[test]
     fn if_true_i32() {
         sf!(sf);
         let block = Block {
@@ -500,7 +512,6 @@ mod tests {
                         Operation::I32Const(3),
                         Operation::I32Add,
                         Operation::Else,
-                        Operation:: I32Const(42),
                         Operation::End
                     ]
                 }),
@@ -521,9 +532,6 @@ mod tests {
                 Operation::If(Block {
                     block_type: BlockType::Empty,
                     operations: vec![
-                        Operation::I32Const(6),
-                        Operation::I32Const(3),
-                        Operation::I32Add,
                         Operation::Else,
                         Operation:: I32Const(42),
                         Operation::End
