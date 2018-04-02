@@ -199,7 +199,7 @@ impl Operation {
 				Ok(block) => Ok(Operation::Block(block)),
 				Err(e) => Err(e)
 			},
-			0x03 => match BlockType::parse(reader, module) {
+			0x03 => match Block::parse(reader, module) {
 				Ok(block) => Ok(Operation::Loop(block)),
 				Err(e) => Err(e)
 			},

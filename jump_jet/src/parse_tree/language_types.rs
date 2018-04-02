@@ -61,9 +61,9 @@ pub enum Operation {
     Unreachable,
     Nop,
     Block(Block),
-    Loop(BlockType), // loop
-    If(Block), // if
-    Else, // else - TODO should have BlockType immediate?
+    Loop(Block),
+    If(Block),
+    Else,
     End,
     Branch(i32), // varuint32 | break from block
     BranchIf(i32), // varuint32 | break if condition

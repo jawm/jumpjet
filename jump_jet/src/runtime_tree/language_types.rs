@@ -140,15 +140,16 @@ impl Execute for Block {
                     let x = b.execute(stack_frame);
                     if x != 0 { return x-1}
                 },
-                Operation::Loop(ref b) => {},
+                Operation::Loop(ref b) => {b.execute(stack_frame);},
                 Operation::If(ref b) => {println!("calling if"); wasm_if!({
                     b.execute(stack_frame);
                 }, {
-                    let index = b.operations.iter().position(|r|r == &Operation::Else).unwrap();
-                    Block {
-                        block_type: b.block_type.clone(),
-                        operations: b.operations.clone().split_off(index+1)
-                    }.execute(stack_frame);
+                    if let Some(index) = b.operations.iter().position(|r|r == &Operation::Else){
+                        Block {
+                            block_type: b.block_type.clone(),
+                            operations: b.operations.clone().split_off(index+1)
+                        }.execute(stack_frame);
+                    }
                 });},
                 Operation::Else => {break},
                 Operation::End => {break},
@@ -470,6 +471,7 @@ mod tests {
     use std::cell::RefCell;
     use parse_tree::language_types::BlockType;
 
+    // Generates a simple stackframe to work with
     macro_rules! sf {
         ($a:ident) => {
             let functions = vec![];
@@ -501,6 +503,62 @@ mod tests {
         block.execute(&mut sf);
     }
 
+    #[test]
+    fn nop_does_nothing() {
+        sf!(sf);
+        let block = Block {
+            block_type: BlockType::Value(ValueType::I32),
+            operations: vec![
+                Operation::Nop,
+            ]
+        };
+        block.execute(&mut sf);
+        // TODO actually check that the sf hasn't changed?
+    }
+
+    #[test]
+    fn block_executes() {
+        sf!(sf);
+        let block = Block {
+            block_type: BlockType::Value(ValueType::I32),
+            operations: vec![
+                Operation::Block(Block {
+                    block_type: BlockType::Value(ValueType::I32),
+                    operations: vec![
+                        Operation::I32Const(1)
+                    ]
+                })
+            ]
+        };
+        block.execute(&mut sf);
+        assert_eq!(sf.stack.pop(), Some(ValueTypeProvider::I32(1)));
+    }
+
+    #[test]
+    fn loop_runs_multiple_times() {
+        sf!(sf);
+        let block = Block {
+            block_type: BlockType::Empty,
+            operations: vec![
+                Operation::I32Const(0),
+                Operation::I32Const(1),
+                Operation::I32Const(2),
+                Operation::Loop(Block {
+                    block_type: BlockType::Value(ValueType::I32),
+                    operations: vec![
+                        Operation::I32Eqz,
+                        Operation::If(Block {
+                            block_type: BlockType::Empty,
+                            operations: vec![Operation::Branch(1)]
+                        }),
+                        Operation::Drop
+                    ]
+                })
+            ]
+        };
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(0)]);
+    }
 
     #[test]
     fn if_true_i32() {
@@ -547,5 +605,4 @@ mod tests {
         block.execute(&mut sf);
         assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
     }
-
 }
