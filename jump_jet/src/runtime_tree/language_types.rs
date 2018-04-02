@@ -132,7 +132,7 @@ impl Execute for Block {
         }
 
         for operation in &(self.operations) {
-            println!("{:?} ", operation);
+            println!("{:?} {:?}", stack_frame.stack, operation);
             match *operation {
                 Operation::Unreachable => panic!("Unreachable code executed"),
                 Operation::Nop => {},
@@ -140,10 +140,18 @@ impl Execute for Block {
                     let x = b.execute(stack_frame);
                     if x != 0 { return x-1}
                 },
-                Operation::Loop(ref b) => {b.execute(stack_frame);},
-                Operation::If(ref b) => {println!("calling if"); wasm_if!({
+                Operation::Loop(ref b) => {
+                    let mut x = 0;
+                    while x == 0 {
+                        x = b.execute(stack_frame);
+                    }
+                    if x-1 != 0 {return x-1}
+                },
+                Operation::If(ref b) => {wasm_if!({
                     b.execute(stack_frame);
                 }, {
+                    // TODO this searches the entirety of the program for another else
+                    // It probably also bugs out if there is a later else part of a different if/else
                     if let Some(index) = b.operations.iter().position(|r|r == &Operation::Else){
                         Block {
                             block_type: b.block_type.clone(),
@@ -540,24 +548,24 @@ mod tests {
         let block = Block {
             block_type: BlockType::Empty,
             operations: vec![
+                Operation::I32Const(42),
                 Operation::I32Const(0),
                 Operation::I32Const(1),
                 Operation::I32Const(2),
+                Operation::I32Const(3),
                 Operation::Loop(Block {
                     block_type: BlockType::Value(ValueType::I32),
                     operations: vec![
                         Operation::I32Eqz,
-                        Operation::If(Block {
-                            block_type: BlockType::Empty,
-                            operations: vec![Operation::Branch(1)]
-                        }),
-                        Operation::Drop
+                        Operation::BranchIf(1),
+                        Operation::End
                     ]
-                })
+                }),
+                Operation::End
             ]
         };
         block.execute(&mut sf);
-        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(0)]);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
     }
 
     #[test]
