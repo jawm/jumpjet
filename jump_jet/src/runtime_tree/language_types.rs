@@ -127,6 +127,8 @@ impl Execute for Block {
                         println!("falsey {:?}", i);
                         $falsey;
                     }
+                } else {
+                    panic!("if statement didn't have value present to check");
                 }
             };
         }
@@ -271,13 +273,7 @@ impl Execute for Block {
                     if mem::discriminant(&a) != mem::discriminant(&b) {
                         panic!("ValueTypeProvider must be the same for 'a' and 'b' in 'select' op!")
                     }
-                    op!(v:I32 | @any => {
-                        if v != 0 {
-                            a
-                        } else {
-                            b
-                        }
-                    });
+                    wasm_if!(stack_frame.stack.push(a), stack_frame.stack.push(b));
                 },
                 Operation::GetLocal(idx) => stack_frame.stack.push(stack_frame.locals[idx].clone()),
                 Operation::SetLocal(idx) => {
@@ -317,8 +313,18 @@ impl Execute for Block {
                 },
                 Operation::I32Load(ref mem) => {mem_op!(mem => I32(i32));},
                 Operation::I64Load(ref mem) => {mem_op!(mem => I64(i64));},
-                Operation::F32Load(ref mem) => {mem_op!(mem => F32(f32));},
-                Operation::F64Load(ref mem) => {mem_op!(mem => F64(f64));},
+                Operation::F32Load(ref mem) => {
+                    let offset = (mem.flags + mem.offset) as usize;
+                    let mut a = &stack_frame.data.memories[0].values[offset..offset+8];
+                    let value = a.read_f32::<LittleEndian>().unwrap();
+                    stack_frame.stack.push(ValueTypeProvider::F32(value));
+                },
+                Operation::F64Load(ref mem) => {
+                    let offset = (mem.flags + mem.offset) as usize;
+                    let mut a = &stack_frame.data.memories[0].values[offset..offset+8];
+                    let value = a.read_f64::<LittleEndian>().unwrap();
+                    stack_frame.stack.push(ValueTypeProvider::F64(value));
+                },
                 Operation::I32Load8S(ref mem) => {mem_op!(mem => I32(i8,i32));},
                 Operation::I32Load8U(ref mem) => {mem_op!(mem => I32(u8,i32));},
                 Operation::I32Load16S(ref mem) => {mem_op!(mem => I32(i16,i32));},
@@ -488,6 +494,8 @@ mod tests {
     use std::cell::RefCell;
     use parse_tree::language_types::BlockType;
     use parse_tree::language_types::BranchTable;
+    use parse_tree::language_types::MemoryImmediate;
+    use parse_tree::language_types::ResizableLimits;
 
     // Generates a simple stackframe to work with
     macro_rules! sf {
@@ -722,7 +730,7 @@ mod tests {
         assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42), ValueTypeProvider::I32(42)]);
     }
 
-    // some more tests
+    // TODO: Call, Return, CallIndirect
 
     #[test]
     fn drop_value_from_stack() {
@@ -738,11 +746,184 @@ mod tests {
 
     #[test]
     fn select_value_true() {
-//        panic!();
+        sf!(sf);
+        let block = block! { Value(ValueType::I32), {
+            Operation::I32Const(1);
+            Operation::I32Const(13);
+            Operation::I32Const(42);
+            Operation::Select;
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
     }
 
     #[test]
     fn select_value_false() {
-//        panic!();
+        sf!(sf);
+        let block = block! { Value(ValueType::I32), {
+            Operation::I32Const(0);
+            Operation::I32Const(42);
+            Operation::I32Const(13);
+            Operation::Select;
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
+    }
+
+    #[test]
+    fn get_local() {
+        sf!(sf);
+        sf.locals.push(ValueTypeProvider::I32(42));
+        let block = block! { Value(ValueType::I32), {
+            Operation::GetLocal(0);
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
+    }
+
+    #[test]
+    fn set_local() {
+        sf!(sf);
+        sf.locals.push(ValueTypeProvider::I32(13));
+        let block = block! { Value(ValueType::I32), {
+            Operation::I32Const(42);
+            Operation::TeeLocal(0);
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.locals, &mut vec![ValueTypeProvider::I32(42)]);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
+    }
+
+    #[test]
+    fn get_global() {
+        sf!(sf);
+        sf.data.globals.push(ValueTypeProvider::I32(42));
+        let block = block! { Value(ValueType::I32), {
+            Operation::GetGlobal(0);
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
+    }
+
+    #[test]
+    fn set_global() {
+        sf!(sf);
+        sf.data.globals.push(ValueTypeProvider::I32(13));
+        let block = block! { Value(ValueType::I32), {
+            Operation::I32Const(42);
+            Operation::SetGlobal(0);
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(&mut *sf.data.globals, &mut vec![ValueTypeProvider::I32(42)]);
+    }
+
+    macro_rules! setup_memory {
+        ($sf:ident, $start:expr, [$($byte:expr),*]) => {
+            $sf.data.memories.push(Memory {
+                limits: ResizableLimits {
+                    initial: 50,
+                    maximum: None
+                },
+                values: vec![0; 50]
+            });
+            let bytes = vec![$($byte),*];
+            $sf.data.memories[0].values.splice($start..bytes.len(), bytes);
+        }
+    }
+
+    #[test]
+    fn load_i32_from_memory() {
+        {
+            sf!(sf);
+            setup_memory!(sf, 0, [42]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I32Load(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            setup_memory!(sf, 0, [0xef, 0xbe, 0xad, 0xde, 0xff]); // ff isn't read
+            let block = block! { Value(ValueType::I32), {
+                Operation::I32Load(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(0xdeadbeef)]);
+        }
+    }
+
+    #[test]
+    fn load_i64_from_memory() {
+        {
+            sf!(sf);
+            setup_memory!(sf, 0, [42]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Load(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(42)]);
+        }
+        {
+            sf!(sf);
+            setup_memory!(sf, 0, [0xef, 0xbe, 0xad, 0xde, 0xbe, 0xba, 0xfe, 0xca, 0xff]); // ff isn't read
+            let block = block! { Value(ValueType::I64), {
+                Operation::I64Load(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(0xcafebabedeadbeef)]);
+        }
+    }
+
+    #[test]
+    fn load_f32_from_memory() {
+        sf!(sf);
+        setup_memory!(sf, 0, [0xc3, 0xf5, 0x48, 0x40]);
+        let block = block! { Value(ValueType::I32), {
+            Operation::F32Load(MemoryImmediate {
+                flags: 0,
+                offset: 0
+            });
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(3.14)]);
+    }
+
+    #[test]
+    fn load_f64_from_memory() {
+        sf!(sf);
+        setup_memory!(sf, 0, [0x81, 0xf6, 0x97, 0x9b, 0x77, 0xe3, 0xf9, 0x3f]);
+        let block = block! { Value(ValueType::F64), {
+            Operation::F64Load(MemoryImmediate {
+                flags: 0,
+                offset: 0
+            });
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(1.61803398875)]);
     }
 }
