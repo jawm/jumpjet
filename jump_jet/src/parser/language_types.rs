@@ -588,9 +588,9 @@ impl BranchTable {
 		let target_count = reader.bytes().read_varuint(32).unwrap() as u32;
 		let mut targets = vec![];
 		for _ in 0..target_count {
-			targets.push(reader.bytes().read_varuint(32).unwrap() as u32);
+			targets.push(reader.bytes().read_varuint(32).unwrap() as i32);
 		}
-		let default = reader.bytes().read_varuint(32).unwrap() as usize;
+		let default = reader.bytes().read_varuint(32).unwrap() as i32;
 		Ok(BranchTable {
 			targets,
 			default

@@ -281,6 +281,6 @@ pub struct Block {
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct BranchTable {
-    pub targets: Vec<u32>, // varuint32, possibly change to Vec<BlockType>
-    pub default: usize,
+    pub targets: Vec<i32>, // varuint32, possibly change to Vec<BlockType>
+    pub default: i32,
 }

@@ -163,7 +163,16 @@ impl Execute for Block {
                 Operation::End => {break},
                 Operation::Branch(b) => {return b},
                 Operation::BranchIf(b) => {wasm_if!({return b});},
-                Operation::BranchTable(ref b) => {break;},
+                Operation::BranchTable(ref b) => {
+                    if let Some(ValueTypeProvider::I32(index)) = stack_frame.stack.pop() {
+                        let depth = if (index as usize) < b.targets.len() {
+                            b.targets[index as usize]-1
+                        } else {
+                            b.default
+                        };
+                        return depth;
+                    }
+                },
                 Operation::Call(index) => {
                     let data = &mut stack_frame.data;
                     let function = data.functions.get(index).unwrap();
@@ -478,6 +487,7 @@ mod tests {
     use super::*;
     use std::cell::RefCell;
     use parse_tree::language_types::BlockType;
+    use parse_tree::language_types::BranchTable;
 
     // Generates a simple stackframe to work with
     macro_rules! sf {
@@ -500,26 +510,39 @@ mod tests {
         }
     }
 
+    macro_rules! block {
+        (Value($a:expr), {$($b:expr;)*}) => {
+            block!(@ BlockType::Value($a), $($b;)*);
+        };
+
+        (Empty, {$($b:expr;)*}) => {
+            block!(@ BlockType::Empty, $($b;)*);
+        };
+
+        (@ $a:expr, $($b:expr;)*) => {
+            Block {
+                block_type: $a,
+                operations: vec![$($b,)*]
+            }
+        }
+    }
+
     #[test]
     #[should_panic]
     fn unreachable_panics() {
         sf!(sf);
-        let block = Block {
-            block_type: BlockType::Value(ValueType::I32),
-            operations: vec![Operation::Unreachable]
-        };
+        let block = block!{ Empty, {
+            Operation::Unreachable;
+        }};
         block.execute(&mut sf);
     }
 
     #[test]
     fn nop_does_nothing() {
         sf!(sf);
-        let block = Block {
-            block_type: BlockType::Value(ValueType::I32),
-            operations: vec![
-                Operation::Nop,
-            ]
-        };
+        let block = block! { Empty, {
+            Operation::Nop;
+        }};
         block.execute(&mut sf);
         // TODO actually check that the sf hasn't changed?
     }
@@ -527,17 +550,11 @@ mod tests {
     #[test]
     fn block_executes() {
         sf!(sf);
-        let block = Block {
-            block_type: BlockType::Value(ValueType::I32),
-            operations: vec![
-                Operation::Block(Block {
-                    block_type: BlockType::Value(ValueType::I32),
-                    operations: vec![
-                        Operation::I32Const(1)
-                    ]
-                })
-            ]
-        };
+        let block = block! { Value(ValueType::I32), {
+            Operation::Block(block! { Value(ValueType::I32), {
+                Operation::I32Const(1);
+            }});
+        }};
         block.execute(&mut sf);
         assert_eq!(sf.stack.pop(), Some(ValueTypeProvider::I32(1)));
     }
@@ -545,25 +562,19 @@ mod tests {
     #[test]
     fn loop_runs_multiple_times() {
         sf!(sf);
-        let block = Block {
-            block_type: BlockType::Empty,
-            operations: vec![
-                Operation::I32Const(42),
-                Operation::I32Const(0),
-                Operation::I32Const(1),
-                Operation::I32Const(2),
-                Operation::I32Const(3),
-                Operation::Loop(Block {
-                    block_type: BlockType::Value(ValueType::I32),
-                    operations: vec![
-                        Operation::I32Eqz,
-                        Operation::BranchIf(1),
-                        Operation::End
-                    ]
-                }),
-                Operation::End
-            ]
-        };
+        let block = block! { Empty, {
+            Operation::I32Const(42);
+            Operation::I32Const(0);
+            Operation::I32Const(1);
+            Operation::I32Const(2);
+            Operation::I32Const(3);
+            Operation::Loop(block! { Value(ValueType::I32), {
+                Operation::I32Eqz;
+                Operation::BranchIf(1);
+                Operation::End;
+            }});
+            Operation::End;
+        }};
         block.execute(&mut sf);
         assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
     }
@@ -571,23 +582,17 @@ mod tests {
     #[test]
     fn if_true_i32() {
         sf!(sf);
-        let block = Block {
-            block_type: BlockType::Value(ValueType::I32),
-            operations: vec![
-                Operation::I32Const(1),
-                Operation::If(Block {
-                    block_type: BlockType::Empty,
-                    operations: vec![
-                        Operation::I32Const(3),
-                        Operation::I32Const(3),
-                        Operation::I32Add,
-                        Operation::Else,
-                        Operation::End
-                    ]
-                }),
-                Operation::End
-            ]
-        };
+        let block = block! { Value(ValueType::I32), {
+            Operation::I32Const(1);
+            Operation::If(block! { Empty, {
+                Operation::I32Const(3);
+                Operation::I32Const(3);
+                Operation::I32Add;
+                Operation::Else;
+                Operation::End;
+            }});
+            Operation::End;
+        }};
         block.execute(&mut sf);
         assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(6)]);
     }
@@ -595,22 +600,149 @@ mod tests {
     #[test]
     fn if_false_else_i32() {
         sf!(sf);
-        let block = Block {
-            block_type: BlockType::Value(ValueType::I32),
-            operations: vec![
-                Operation::I32Const(0),
-                Operation::If(Block {
-                    block_type: BlockType::Empty,
-                    operations: vec![
-                        Operation::Else,
-                        Operation:: I32Const(42),
-                        Operation::End
-                    ]
-                }),
-                Operation::End
-            ]
-        };
+        let block = block! { Value(ValueType::I32), {
+            Operation::I32Const(0);
+            Operation::If(block! { Empty, {
+                Operation::Else;
+                Operation:: I32Const(42);
+                Operation::End;
+            }});
+            Operation::End;
+        }};
         block.execute(&mut sf);
         assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
+    }
+
+    #[test]
+    fn end_stops_execution() {
+        sf!(sf);
+        let block = block! { Value(ValueType::I32), {
+            Operation::End;
+            Operation::I32Const(0);
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![]);
+    }
+
+    #[test]
+    fn branch_leaves_block() {
+        sf!(sf);
+        let block = block! { Value(ValueType::I32), {
+            Operation::Block(block! { Empty, {
+                Operation::I32Const(42);
+                Operation::Branch(1);
+                Operation::I32Const(13);
+                Operation::End;
+            }});
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
+    }
+
+    #[test]
+    fn branch_if_true_leaves() {
+        sf!(sf);
+        let block = block! { Value(ValueType::I32), {
+            Operation::Block(block! { Empty, {
+                Operation::I32Const(42);
+                Operation::I32Const(1);
+                Operation::BranchIf(1);
+                Operation::I32Const(13);
+                Operation::End;
+            }});
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
+    }
+
+    #[test]
+    fn branch_if_false_continues() {
+        sf!(sf);
+        let block = block! { Value(ValueType::I32), {
+            Operation::Block(block! { Empty, {
+                Operation::I32Const(0);
+                Operation::BranchIf(1);
+                Operation::I32Const(42);
+                Operation::End;
+            }});
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
+    }
+
+    #[test]
+    fn branch_table_within_bounds_branches() {
+        sf!(sf);
+        let block = block! { Value(ValueType::I32), {
+            Operation::Block(block! { Empty, {
+                Operation::Block(block! { Empty, {
+                    Operation::I32Const(42);
+                    Operation::I32Const(0);
+                    Operation::BranchTable(BranchTable {
+                        default: 0,
+                        targets: vec![2]
+                    });
+                    Operation::I32Const(13);
+                    Operation::End;
+                }});
+                Operation::I32Const(13);
+                Operation::End;
+            }});
+            Operation::I32Const(42);
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42), ValueTypeProvider::I32(42)]);
+    }
+
+    #[test]
+    fn branch_table_outside_bounds_branches_default() {
+        sf!(sf);
+        let block = block! { Value(ValueType::I32), {
+            Operation::Block(block! { Empty, {
+                Operation::Block(block! { Empty, {
+                    Operation::I32Const(1);
+                    Operation::BranchTable(BranchTable {
+                        default: 0,
+                        targets: vec![2]
+                    });
+                    Operation::I32Const(13);
+                    Operation::End;
+                }});
+                Operation::I32Const(42);
+                Operation::End;
+            }});
+            Operation::I32Const(42);
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42), ValueTypeProvider::I32(42)]);
+    }
+
+    // some more tests
+
+    #[test]
+    fn drop_value_from_stack() {
+        sf!(sf);
+        let block = block! { Value(ValueType::I32), {
+            Operation::I32Const(0);
+            Operation::Drop;
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.stack, &mut vec![]);
+    }
+
+    #[test]
+    fn select_value_true() {
+//        panic!();
+    }
+
+    #[test]
+    fn select_value_false() {
+//        panic!();
     }
 }
