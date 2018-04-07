@@ -1163,4 +1163,93 @@ mod tests {
             assert_eq!(sf.data.memories[0].values[0..9], [0x81, 0xf6, 0x97, 0x9b, 0x77, 0xe3, 0xf9, 0x3f, 0x00]);
         }
     }
+
+    #[test]
+    fn test_complex_int_store_ops() {
+        { // I32Store8
+
+            sf!(sf);
+            setup_memory!(sf, 0, []);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I32Const(42);
+                Operation::I32Store8(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.data.memories[0].values[0..2], [42, 0x00]);
+        }
+        { // I32Store8
+            sf!(sf);
+            setup_memory!(sf, 0, []);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I32Const(0xff42);
+                Operation::I32Store8(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.data.memories[0].values[0..2], [0x42, 0x00]);
+        }
+        { // I32Store16
+            sf!(sf);
+            setup_memory!(sf, 0, []);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I32Const(0xbeef);
+                Operation::I32Store(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.data.memories[0].values[0..3], [0xef, 0xbe, 0x00]);
+        }
+        { // I64Store8
+            sf!(sf);
+            setup_memory!(sf, 0, []);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(42);
+                Operation::I64Store(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.data.memories[0].values[0..2], [42, 0x00]);
+        }
+        { // I64Store16
+            sf!(sf);
+            setup_memory!(sf, 0, []);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(0xbeef);
+                Operation::I64Store(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.data.memories[0].values[0..3], [0xef, 0xbe, 0x00]);
+        }
+        { // I64Store32
+            sf!(sf);
+            setup_memory!(sf, 0, []);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(1234567890);
+                Operation::I64Store(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.data.memories[0].values[0..5], [0xD2, 0x02, 0x96, 0x49, 0x00]);
+        }
+    }
 }
