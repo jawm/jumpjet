@@ -18,7 +18,7 @@ impl Debug for Memory {
         f.debug_struct("Memory")
             .field("limits", &self.limits)
             // TODO it would be better if the below didn't have quotes around it, but I can't quite see how to achieve that...
-            .field("values", &format!("[{:?} * {:?}]", self.values.len() % WASM_PAGE_SIZE, WASM_PAGE_SIZE))
+            .field("values", &format!("[{:?} * {:?}]", self.values.len() % WASM_PAGE_SIZE + 1, WASM_PAGE_SIZE))
             .finish()
     }
 }

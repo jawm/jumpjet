@@ -87,7 +87,7 @@ impl Execute for Block {
             // Write a 32bit int onto the stack
             // mem_op!(I32(i32) => mem);
 
-            ($a:expr => $b:ident($c:ty,$d:ty)) => {
+            (@i $a:expr => $b:ident($c:ty,$d:ty)) => {
                 let offset = ($a.flags + $a.offset) as usize;
                 let size = mem::size_of::<$c>() as usize;
                 let mut a = &stack_frame.data.memories[0].values[offset..offset+8];
@@ -95,8 +95,16 @@ impl Execute for Block {
                 stack_frame.stack.push(ValueTypeProvider::$b(value));
             };
 
+            (@u $a:expr => $b:ident($c:ty,$d:ty)) => {
+                let offset = ($a.flags + $a.offset) as usize;
+                let size = mem::size_of::<$c>() as usize;
+                let mut a = &stack_frame.data.memories[0].values[offset..offset+8];
+                let value = a.read_uint::<LittleEndian>(size).unwrap() as $d;
+                stack_frame.stack.push(ValueTypeProvider::$b(value));
+            };
+
             ($a:expr => $b:ident($c:ty)) => {
-                mem_op!($a => $b($c,$c));
+                mem_op!(@i $a => $b($c,$c));
             };
 
             ($a:ident($c:ty) => $d:expr) => {
@@ -325,20 +333,38 @@ impl Execute for Block {
                     let value = a.read_f64::<LittleEndian>().unwrap();
                     stack_frame.stack.push(ValueTypeProvider::F64(value));
                 },
-                Operation::I32Load8S(ref mem) => {mem_op!(mem => I32(i8,i32));},
-                Operation::I32Load8U(ref mem) => {mem_op!(mem => I32(u8,i32));},
-                Operation::I32Load16S(ref mem) => {mem_op!(mem => I32(i16,i32));},
-                Operation::I32Load16U(ref mem) => {mem_op!(mem => I32(u16,i32));},
-                Operation::I64Load8S(ref mem) => {mem_op!(mem => I64(i8,i64));},
-                Operation::I64Load8U(ref mem) => {mem_op!(mem => I64(u8,i64));},
-                Operation::I64Load16S(ref mem) => {mem_op!(mem => I64(i16,i64));},
-                Operation::I64Load16U(ref mem) => {mem_op!(mem => I64(u16,i64));},
-                Operation::I64Load32S(ref mem) => {mem_op!(mem => I64(i32,i64));},
-                Operation::I64Load32U(ref mem) => {mem_op!(mem => I64(u32,i64));},
+                Operation::I32Load8S(ref mem) => {mem_op!(@i mem => I32(i8,i32));},
+                Operation::I32Load8U(ref mem) => {mem_op!(@u mem => I32(u8,i32));},
+                Operation::I32Load16S(ref mem) => {mem_op!(@i mem => I32(i16,i32));},
+                Operation::I32Load16U(ref mem) => {mem_op!(@u mem => I32(u16,i32));},
+                Operation::I64Load8S(ref mem) => {mem_op!(@i mem => I64(i8,i64));},
+                Operation::I64Load8U(ref mem) => {mem_op!(@u mem => I64(u8,i64));},
+                Operation::I64Load16S(ref mem) => {mem_op!(@i mem => I64(i16,i64));},
+                Operation::I64Load16U(ref mem) => {mem_op!(@u mem => I64(u16,i64));},
+                Operation::I64Load32S(ref mem) => {mem_op!(@i mem => I64(i32,i64));},
+                Operation::I64Load32U(ref mem) => {mem_op!(@u mem => I64(u32,i64));},
                 Operation::I32Store(ref mem) => {mem_op!(I32(i32) => mem);},
                 Operation::I64Store(ref mem) => {mem_op!(I64(i64) => mem);},
-                Operation::F32Store(ref mem) => {mem_op!(F32(f32) => mem);},
-                Operation::F64Store(ref mem) => {mem_op!(F64(f64) => mem);},
+                Operation::F32Store(ref mem) => {
+                    if let Some(ValueTypeProvider::F32(value)) = stack_frame.stack.pop() {
+                        let offset = (mem.flags + mem.offset) as usize;
+                        let size = mem::size_of::<f32>() as usize;
+                        let mut a = &mut stack_frame.data.memories[0].values[offset..offset+8];
+                        a.write_f32::<LittleEndian>(value);
+                    } else {
+                        panic!("VTP was wrong type or not present!");
+                    }
+                },
+                Operation::F64Store(ref mem) => {
+                    if let Some(ValueTypeProvider::F64(value)) = stack_frame.stack.pop() {
+                        let offset = (mem.flags + mem.offset) as usize;
+                        let size = mem::size_of::<f64>() as usize;
+                        let mut a = &mut stack_frame.data.memories[0].values[offset..offset+8];
+                        a.write_f64::<LittleEndian>(value);
+                    } else {
+                        panic!("VTP was wrong type or not present!");
+                    }
+                },
                 Operation::I32Store8(ref mem) => {mem_op!(I32(i8) => mem);},
                 Operation::I32Store16(ref mem) => {mem_op!(I32(i16) => mem);},
                 Operation::I64Store8(ref mem) => {mem_op!(I64(i8) => mem);},
@@ -827,14 +853,14 @@ mod tests {
         ($sf:ident, $start:expr, [$($byte:expr),*]) => {
             $sf.data.memories.push(Memory {
                 limits: ResizableLimits {
-                    initial: 50,
+                    initial: 1,
                     maximum: None
                 },
-                values: vec![0; 50]
+                values: vec![0; 65536]
             });
             let bytes = vec![$($byte),*];
             $sf.data.memories[0].values.splice($start..bytes.len(), bytes);
-        }
+        };
     }
 
     #[test]
@@ -859,6 +885,19 @@ mod tests {
                 Operation::I32Load(MemoryImmediate {
                     flags: 0,
                     offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(0xdeadbeef)]);
+        }
+        {
+            sf!(sf);
+            setup_memory!(sf, 3, [0xef, 0xbe, 0xad, 0xde, 0xff]); // ff isn't read
+            let block = block! { Value(ValueType::I32), {
+                Operation::I32Load(MemoryImmediate {
+                    flags: 0,
+                    offset: 3
                 });
                 Operation::End;
             }};
@@ -925,5 +964,203 @@ mod tests {
         }};
         block.execute(&mut sf);
         assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(1.61803398875)]);
+    }
+
+    #[test]
+    fn i32_loaders() {
+        { // I32Load8S
+            sf!(sf);
+            setup_memory!(sf, 0, [-42i8 as u8]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I32Load8S(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(-42)]);
+        }
+        { // I32Load8U
+            sf!(sf);
+            setup_memory!(sf, 0, [42]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I32Load8U(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I32Load16S
+            sf!(sf);
+            setup_memory!(sf, 0, [0x00, 0x83]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I32Load16S(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(-32000)]);
+        }
+        { // I32Load16U
+            sf!(sf);
+            setup_memory!(sf, 0, [0x00, 0x7d]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I32Load16U(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(32000)]);
+        }
+    }
+
+    #[test]
+    fn i64_loaders() {
+        { // I64Load8S
+            sf!(sf);
+            setup_memory!(sf, 0, [-42i8 as u8]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Load8S(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(-42)]);
+        }
+        { // I64Load8U
+            sf!(sf);
+            setup_memory!(sf, 0, [42]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Load8U(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(42)]);
+        }
+        { // I64Load16S
+            sf!(sf);
+            setup_memory!(sf, 0, [0x00, 0x83]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Load16S(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(-32000)]);
+        }
+        { // I64Load16U
+            sf!(sf);
+            setup_memory!(sf, 0, [0x00, 0x7d]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Load16U(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(32000)]);
+        }
+        { // I64Load32S
+            sf!(sf);
+            setup_memory!(sf, 0, [0x2e, 0xfd, 0x69, 0xb6]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Load32S(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(-1234567890)]);
+        }
+        { // I64Load32U
+            sf!(sf);
+            setup_memory!(sf, 0, [0xD2, 0x02, 0x96, 0x49]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Load32U(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(1234567890)]);
+        }
+    }
+
+    #[test]
+    fn basic_number_store_ops() {
+        { // I32Store
+            sf!(sf);
+            setup_memory!(sf, 0, []);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I32Const(1234567890);
+                Operation::I32Store(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.data.memories[0].values[0..5], [0xD2, 0x02, 0x96, 0x49, 0x00]);
+        }
+        { // I64Store
+            sf!(sf);
+            setup_memory!(sf, 0, []);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(0x123456789abcdef0);
+                Operation::I64Store(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.data.memories[0].values[0..9], [0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12, 0x00]);
+        }
+        { // F32Store
+            sf!(sf);
+            setup_memory!(sf, 0, []);
+            let block = block! { Value(ValueType::I32), {
+                Operation::F32Const(3.1415);
+                Operation::F32Store(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.data.memories[0].values[0..5], [0x56, 0x0e, 0x49, 0x40, 0x00]);
+        }
+        { // F64Store
+            sf!(sf);
+            setup_memory!(sf, 0, []);
+            let block = block! { Value(ValueType::I32), {
+                Operation::F64Const(1.61803398875);
+                Operation::F64Store(MemoryImmediate {
+                    flags: 0,
+                    offset: 0
+                });
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.data.memories[0].values[0..9], [0x81, 0xf6, 0x97, 0x9b, 0x77, 0xe3, 0xf9, 0x3f, 0x00]);
+        }
     }
 }
