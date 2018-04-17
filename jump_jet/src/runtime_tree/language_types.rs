@@ -391,7 +391,7 @@ impl Execute for Block {
                 Operation::I32LeU => {op!(a:I32, b:I32 | @bool => (a as u32) <= (b as u32))},
                 Operation::I32GeS => {op!(a:I32, b:I32 | @bool => a>=b)},
                 Operation::I32GeU => {op!(a:I32, b:I32 | @bool => (a as u32) >= (b as u32))},
-                Operation::I64Eqz => {op!(a:I32 | @bool => a==0)},
+                Operation::I64Eqz => {op!(a:I64 | @bool => a==0)},
                 Operation::I64Eq => {op!(a:I64, b:I64 | @bool => a==b)},
                 Operation::I64Ne => {op!(a:I64, b:I64 | @bool => a!=b)},
                 Operation::I64LtS => {op!(a:I64, b:I64 | @bool => a<b)},
@@ -1250,6 +1250,1236 @@ mod tests {
             }};
             block.execute(&mut sf);
             assert_eq!(sf.data.memories[0].values[0..5], [0xD2, 0x02, 0x96, 0x49, 0x00]);
+        }
+    }
+
+    #[test]
+    fn const_ops() {
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(1);
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack.pop(), Some(ValueTypeProvider::I32(1)));
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I64), {
+                Operation::Block(block! { Value(ValueType::I64), {
+                    Operation::I64Const(1);
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack.pop(), Some(ValueTypeProvider::I64(1)));
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::Block(block! { Value(ValueType::F32), {
+                    Operation::F32Const(3.14);
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack.pop(), Some(ValueTypeProvider::F32(3.14)));
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::F64), {
+                Operation::Block(block! { Value(ValueType::F64), {
+                    Operation::F64Const(3.14);
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack.pop(), Some(ValueTypeProvider::F64(3.14)));
+        }
+    }
+
+    #[test]
+    fn i32_comparison_ops() {
+        { // I32Eqz
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(0);
+                    Operation::I32Eqz;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(13);
+                    Operation::I32Eqz;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I32Eq
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(123);
+                    Operation::I32Const(122 + 1);
+                    Operation::I32Eq;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(123);
+                    Operation::I32Const(999);
+                    Operation::I32Eq;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I32Ne
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(123);
+                    Operation::I32Const(999);
+                    Operation::I32Ne;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(999);
+                    Operation::I32Const(999);
+                    Operation::I32Ne;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I32LtS
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(999);
+                    Operation::I32Const(-400);
+                    Operation::I32LtS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(-100);
+                    Operation::I32Const(-400);
+                    Operation::I32LtS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I32LtU
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(100);
+                    Operation::I32Const(50);
+                    Operation::I32LtU;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I32GtS
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(-400);
+                    Operation::I32Const(999);
+                    Operation::I32GtS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(-400);
+                    Operation::I32Const(-100);
+                    Operation::I32GtS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I32GtU
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(10);
+                    Operation::I32Const(50);
+                    Operation::I32GtU;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I32LeS
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(999);
+                    Operation::I32Const(-400);
+                    Operation::I32LeS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(-400);
+                    Operation::I32Const(-400);
+                    Operation::I32LeS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I32LeU
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(50);
+                    Operation::I32Const(50);
+                    Operation::I32LeU;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(50);
+                    Operation::I32Const(25);
+                    Operation::I32LeU;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I32GeS
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(999);
+                    Operation::I32Const(1000);
+                    Operation::I32GeS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(-400);
+                    Operation::I32Const(-400);
+                    Operation::I32GeS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I32GeU
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(999);
+                    Operation::I32Const(1000);
+                    Operation::I32GeU;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(400);
+                    Operation::I32Const(400);
+                    Operation::I32GeU;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+    }
+
+    #[test]
+    fn i64_comparison_ops() {
+        { // I64Eqz
+            sf!(sf);
+            let block = block! { Value(ValueType::I64), {
+                Operation::Block(block! { Value(ValueType::I64), {
+                    Operation::I64Const(0);
+                    Operation::I64Eqz;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I64), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(13);
+                    Operation::I64Eqz;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I64Eq
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(123);
+                    Operation::I64Const(122 + 1);
+                    Operation::I64Eq;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(123);
+                    Operation::I64Const(999);
+                    Operation::I64Eq;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I64Ne
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(123);
+                    Operation::I64Const(999);
+                    Operation::I64Ne;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(999);
+                    Operation::I64Const(999);
+                    Operation::I64Ne;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I64LtS
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(999);
+                    Operation::I64Const(-400);
+                    Operation::I64LtS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(-100);
+                    Operation::I64Const(-400);
+                    Operation::I64LtS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I64LtU
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(100);
+                    Operation::I64Const(50);
+                    Operation::I64LtU;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I64GtS
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(-400);
+                    Operation::I64Const(999);
+                    Operation::I64GtS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I32Const(-400);
+                    Operation::I32Const(-100);
+                    Operation::I32GtS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I64GtU
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(10);
+                    Operation::I64Const(50);
+                    Operation::I64GtU;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I64LeS
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(999);
+                    Operation::I64Const(-400);
+                    Operation::I64LeS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(-400);
+                    Operation::I64Const(-400);
+                    Operation::I64LeS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I64LeU
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(50);
+                    Operation::I64Const(50);
+                    Operation::I64LeU;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(50);
+                    Operation::I64Const(25);
+                    Operation::I64LeU;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I64GeS
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(999);
+                    Operation::I64Const(1000);
+                    Operation::I64GeS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(-400);
+                    Operation::I64Const(-400);
+                    Operation::I64GeS;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // I64GeU
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(999);
+                    Operation::I64Const(1000);
+                    Operation::I64GeU;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::I64Const(400);
+                    Operation::I64Const(400);
+                    Operation::I64GeU;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+    }
+
+    #[test]
+    fn f32_comparison_ops() {
+        { // F32Eq
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(3.14);
+                    Operation::F32Const(3.14);
+                    Operation::F32Eq;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(3.14);
+                    Operation::F32Const(5.00);
+                    Operation::F32Eq;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // F32Ne
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(3.14);
+                    Operation::F32Const(5.00);
+                    Operation::F32Ne;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(3.14);
+                    Operation::F32Const(3.14);
+                    Operation::F32Ne;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // F32Lt
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(5.00);
+                    Operation::F32Const(3.14);
+                    Operation::F32Lt;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(5.00);
+                    Operation::F32Const(6.00);
+                    Operation::F32Lt;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // F32Gt
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(5.00);
+                    Operation::F32Const(3.14);
+                    Operation::F32Gt;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(5.00);
+                    Operation::F32Const(6.00);
+                    Operation::F32Gt;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // F32Le
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(5.00);
+                    Operation::F32Const(3.14);
+                    Operation::F32Le;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(5.00);
+                    Operation::F32Const(6.00);
+                    Operation::F32Le;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(6.00);
+                    Operation::F32Const(6.00);
+                    Operation::F32Le;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // F32Ge
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(5.00);
+                    Operation::F32Const(3.14);
+                    Operation::F32Ge;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(5.00);
+                    Operation::F32Const(6.00);
+                    Operation::F32Ge;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F32Const(6.00);
+                    Operation::F32Const(6.00);
+                    Operation::F32Ge;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+    }
+
+    #[test]
+    fn f64_comparison_ops() {
+        { // F64Eq
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(3.14);
+                    Operation::F64Const(3.14);
+                    Operation::F64Eq;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(3.14);
+                    Operation::F64Const(5.00);
+                    Operation::F64Eq;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // F64Ne
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(3.14);
+                    Operation::F64Const(5.00);
+                    Operation::F64Ne;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(3.14);
+                    Operation::F64Const(3.14);
+                    Operation::F64Ne;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // F64Lt
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(5.00);
+                    Operation::F64Const(3.14);
+                    Operation::F64Lt;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(5.00);
+                    Operation::F64Const(6.00);
+                    Operation::F64Lt;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // F64Gt
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(5.00);
+                    Operation::F64Const(3.14);
+                    Operation::F64Gt;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(5.00);
+                    Operation::F64Const(6.00);
+                    Operation::F64Gt;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // F64Le
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(5.00);
+                    Operation::F64Const(3.14);
+                    Operation::F64Le;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(5.00);
+                    Operation::F64Const(6.00);
+                    Operation::F64Le;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(6.00);
+                    Operation::F64Const(6.00);
+                    Operation::F64Le;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        { // F64Ge
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(5.00);
+                    Operation::F64Const(3.14);
+                    Operation::F64Ge;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(13);
+                        Operation::End;
+                    }});
+                    Operation::I32Const(42);
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(5.00);
+                    Operation::F64Const(6.00);
+                    Operation::F64Ge;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::Block(block! { Value(ValueType::I32), {
+                    Operation::F64Const(6.00);
+                    Operation::F64Const(6.00);
+                    Operation::F64Ge;
+                    Operation::If(block! { Empty, {
+                        Operation::I32Const(42);
+                        Operation::End;
+                    }});
+                    Operation::End;
+                }});
+            }};
+            block.execute(&mut sf);
+            assert_eq!(*sf.stack, vec![ValueTypeProvider::I32(42)]);
         }
     }
 }
