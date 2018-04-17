@@ -816,6 +816,20 @@ mod tests {
         sf.locals.push(ValueTypeProvider::I32(13));
         let block = block! { Value(ValueType::I32), {
             Operation::I32Const(42);
+            Operation::SetLocal(0);
+            Operation::End;
+        }};
+        block.execute(&mut sf);
+        assert_eq!(sf.locals, &mut vec![ValueTypeProvider::I32(42)]);
+        assert_eq!(sf.stack, &mut vec![]);
+    }
+
+    #[test]
+    fn tee_local() {
+        sf!(sf);
+        sf.locals.push(ValueTypeProvider::I32(13));
+        let block = block! { Value(ValueType::I32), {
+            Operation::I32Const(42);
             Operation::TeeLocal(0);
             Operation::End;
         }};
@@ -1165,7 +1179,7 @@ mod tests {
     }
 
     #[test]
-    fn test_complex_int_store_ops() {
+    fn int_store_ops() {
         { // I32Store8
 
             sf!(sf);
