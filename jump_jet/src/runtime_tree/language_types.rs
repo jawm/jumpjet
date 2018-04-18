@@ -2498,7 +2498,7 @@ mod tests {
     }
 
     #[test]
-    fn i32_ops () {
+    fn i32_ops() {
         { // I32Clz
             sf!(sf);
             let block = block! { Value(ValueType::I32), {
@@ -2540,7 +2540,7 @@ mod tests {
             block.execute(&mut sf);
             assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(42)]);
         }
-        { // I32Add
+        { // I32Sub
             sf!(sf);
             let block = block! { Value(ValueType::I32), {
                 Operation::I32Const(10);
@@ -2686,7 +2686,7 @@ mod tests {
         {
             sf!(sf);
             let block = block! { Value(ValueType::I32), {
-                Operation::I32Const(4); // shift by three places
+                Operation::I32Const(4); // shift by four places
                 Operation::I32Const(0xffffffff);
                 Operation::I32ShrS;
                 Operation::End;
@@ -2697,7 +2697,7 @@ mod tests {
         { // I32ShrU
             sf!(sf);
             let block = block! { Value(ValueType::I32), {
-                Operation::I32Const(4); // shift by three places
+                Operation::I32Const(4); // shift by four places
                 Operation::I32Const(0xffffffff);
                 Operation::I32ShrU;
                 Operation::End;
@@ -2708,7 +2708,7 @@ mod tests {
         { // I32Rotl
             sf!(sf);
             let block = block! { Value(ValueType::I32), {
-                Operation::I32Const(4); // shift by three places
+                Operation::I32Const(4); // shift by four places
                 Operation::I32Const(0xc0ffffff);
                 Operation::I32Rotl;
                 Operation::End;
@@ -2716,16 +2716,248 @@ mod tests {
             block.execute(&mut sf);
             assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(0x0ffffffc)]);
         }
-        { // I32Rotl
+        { // I32Rotr
             sf!(sf);
             let block = block! { Value(ValueType::I32), {
-                Operation::I32Const(4); // shift by three places
+                Operation::I32Const(4); // shift by four places
                 Operation::I32Const(0xdeadbeef);
                 Operation::I32Rotr;
                 Operation::End;
             }};
             block.execute(&mut sf);
             assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(0xfdeadbee)]);
+        }
+    }
+
+    #[test]
+    fn i64_ops() {
+        { // I64Clz
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(0x00000000_0000ffff);
+                Operation::I64Clz;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(48)]);
+        }
+        { // I64Ctz
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(0xffff0000);
+                Operation::I64Ctz;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(16)]);
+        }
+        { // I64Popcnt
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(0x0000fff0);
+                Operation::I64Popcnt;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(12)]);
+        }
+        { // I64Add
+            sf!(sf);
+            let block = block! { Value(ValueType::I64), {
+                Operation::I64Const(36);
+                Operation::I64Const(6);
+                Operation::I64Add;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(42)]);
+        }
+        { // I64Sub
+            sf!(sf);
+            let block = block! { Value(ValueType::I64), {
+                Operation::I64Const(10);
+                Operation::I64Const(52);
+                Operation::I64Sub;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(42)]);
+        }
+        { // I64Mul
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(2);
+                Operation::I64Const(21);
+                Operation::I64Mul;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(42)]);
+        }
+        { // I64DivS
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(-2);
+                Operation::I64Const(80);
+                Operation::I64DivS;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(-40)]);
+        }
+        { // I64DivU
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(2);
+                Operation::I64Const(60000);
+                Operation::I64DivU;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(30000)]);
+        }
+        { // I64RemS
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(3);
+                Operation::I64Const(-8);
+                Operation::I64RemS;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(-2)]);
+        }
+        { // I64RemU
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(3);
+                Operation::I64Const(8);
+                Operation::I64RemS;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(2)]);
+        }
+        { // I64And
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(1);
+                Operation::I64Const(1);
+                Operation::I64And;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(1)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(1);
+                Operation::I64Const(0);
+                Operation::I64And;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(0)]);
+        }
+        { // I64Or
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(1);
+                Operation::I64Const(0);
+                Operation::I64Or;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(1)]);
+        }
+        { // I64Xor
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(1);
+                Operation::I64Const(0);
+                Operation::I64Xor;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(1)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(1);
+                Operation::I64Const(1);
+                Operation::I64Xor;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(0)]);
+        }
+        { // I64Shl
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(3); // shift by three places
+                Operation::I64Const(1);
+                Operation::I64Shl;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(8)]);
+        }
+        { // I64ShrS
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(3); // shift by three places
+                Operation::I64Const(8);
+                Operation::I64ShrS;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(1)]);
+        }
+        {
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(4); // shift by four places
+                Operation::I64Const(0xf0ffffff_ffffffff);
+                Operation::I64ShrS;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(0xff0fffff_ffffffff)]); // sign is preserved, therefore it doesn't change
+        }
+        { // I64ShrU
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(4); // shift by four places
+                Operation::I64Const(0xf0ffffff_ffffffff);
+                Operation::I64ShrU;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(0x0f0fffff_ffffffff)]);
+        }
+        { // I64Rotl
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(4); // shift by four places
+                Operation::I64Const(0xc0ffffff_ffffffff);
+                Operation::I64Rotl;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(0x0fffffff_fffffffc)]);
+        }
+        { // I64Rotr
+            sf!(sf);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(4); // shift by four places
+                Operation::I64Const(0xdeadbeef_cafebabe);
+                Operation::I64Rotr;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(0xedeadbee_fcafebab)]);
         }
     }
 }
