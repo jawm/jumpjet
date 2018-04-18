@@ -3258,4 +3258,77 @@ mod tests {
             assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(-3.14)]);
         }
     }
+
+    #[test]
+    fn numeric_conversions() {
+//        Operation::I32WrapI64 => {op!(a:I64 | I32 => a as i32)},
+//        Operation::I32TruncSF32 => {op!(a:F32 | I32 => a as i32)},
+//        Operation::I32TruncUF32 => {op!(a:F32 | I32 => a as i32)},
+//        Operation::I32TruncSF64 => {op!(a:F64 | I32 => a as i32)},
+//        Operation::I32TruncUF64 => {op!(a:F64 | I32 => a as i32)},
+//        Operation::I64ExtendSI32 => {op!(a:I32 | I64 => a as i64)},
+//        Operation::I64ExtendUI32 => {op!(a:I32 | I64 => (a as u32) as i64)},
+//        Operation::I64TruncSF32 => {op!(a:F32 | I64 => a as i64)},
+//        Operation::I64TruncUF32 => {op!(a:F32 | I64 => a as i64)},
+//        Operation::I64TruncSF64 => {op!(a:F64 | I64 => a as i64)},
+//        Operation::I64TruncUF64 => {op!(a:F64 | I64 => a as i64)},
+//        Operation::F32ConvertSI32 => {op!(a:I32 | F32 => a as f32)},
+//        Operation::F32ConvertUI32 => {op!(a:I32 | F32 => (a as u32) as f32)},
+//        Operation::F32ConvertSI64 => {op!(a:I64 | F32 => a as f32)},
+//        Operation::F32ConvertUI64 => {op!(a:I64 | F32 => (a as u64) as f32)},
+//        Operation::F32DemoteF64 => {op!(a:F64 | F32 => a as f32)},
+//        Operation::F64ConvertSI32 => {op!(a:I32 | F64 => a as f64)},
+//        Operation::F64ConvertUI32 => {op!(a:I32 | F64 => (a as u32) as f64)},
+//        Operation::F64ConvertSI64 => {op!(a:I64 | F64 => a as f64)},
+//        Operation::F64ConvertUI64 => {op!(a:I64 | F64 => (a as u64) as f64)},
+//        Operation::F64PromoteF32 => {op!(a:F32 | F64 => a as f64)},
+    }
+
+    #[test]
+    fn numeric_reinterpretations() {
+        { // I32ReinterpretF32
+            sf!(sf);
+            setup_memory!(sf, 0, [-42i8 as u8]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::F32Const(1.40129846432481707092372958329E-45);
+                Operation::I32ReinterpretF32;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I32(1)]);
+        }
+        { // I64ReinterpretF64
+            sf!(sf);
+            setup_memory!(sf, 0, [-42i8 as u8]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::F64Const(3.14);
+                Operation::I64ReinterpretF64;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(0x40091EB851EB851F)]);
+        }
+        { // F32ReinterpretI32
+            sf!(sf);
+            setup_memory!(sf, 0, [-42i8 as u8]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I32Const(1);
+                Operation::F32ReinterpretI32;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(1.40129846432481707092372958329E-45)]);
+        }
+        { // F64ReinterpretI64
+            sf!(sf);
+            setup_memory!(sf, 0, [-42i8 as u8]);
+            let block = block! { Value(ValueType::I32), {
+                Operation::I64Const(0x40091EB851EB851F);
+                Operation::F64ReinterpretI64;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(3.14)]);
+        }
+    }
 }
