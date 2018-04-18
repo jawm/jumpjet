@@ -463,9 +463,7 @@ impl Execute for Block {
                 Operation::F32Div => {op!(a:F32, b:F32 | F32 => a/b)},
                 Operation::F32Min => {op!(a:F32, b:F32 | F32 => a.min(b))},
                 Operation::F32Max => {op!(a:F32, b:F32 | F32 => a.max(b))},
-                Operation::F32Copysign => {op!(a:F32, b:F32 | F32 => {
-                            ((a as u32) | ((b as u32) & (1 << 31))) as f32
-                        })},
+                Operation::F32Copysign => {op!(a:F32, b:F32 | F32 => a.signum() * b)},
                 Operation::F64Abs => {op!(a:F64 | F64 => a.abs())},
                 Operation::F64Neg => {op!(a:F64 | F64 => -a)},
                 Operation::F64Ceil => {op!(a:F64 | F64 => a.ceil())},
@@ -479,9 +477,7 @@ impl Execute for Block {
                 Operation::F64Div => {op!(a:F64, b:F64 | F64 => a/b)},
                 Operation::F64Min => {op!(a:F64, b:F64 | F64 => a.min(b))},
                 Operation::F64Max => {op!(a:F64, b:F64 | F64 => a.max(b))},
-                Operation::F64Copysign => {op!(a:F64, b:F64 | F64 => {
-                            ((a as u64) | ((b as u64) & (1 << 63))) as f64
-                        })},
+                Operation::F64Copysign => {op!(a:F64, b:F64 | F64 => a.signum() * b)},
                 Operation::I32WrapI64 => {op!(a:I64 | I32 => a as i32)},
                 Operation::I32TruncSF32 => {op!(a:F32 | I32 => a as i32)},
                 Operation::I32TruncUF32 => {op!(a:F32 | I32 => a as i32)},
@@ -2958,6 +2954,157 @@ mod tests {
             }};
             block.execute(&mut sf);
             assert_eq!(sf.stack, &mut vec![ValueTypeProvider::I64(0xedeadbee_fcafebab)]);
+        }
+    }
+
+    #[test]
+    fn f32_ops() {
+        { // F32Abs
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(-1.5);
+                Operation::F32Abs;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(1.5)]);
+        }
+        { // F32Negs
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(-1.5);
+                Operation::F32Neg;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(1.5)]);
+        }
+        { // F32Ceil
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(-1.5);
+                Operation::F32Ceil;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(-1.0)]);
+        }
+        { // F32Floor
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(-1.5);
+                Operation::F32Floor;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(-2.0)]);
+        }
+        { // F32Trunc
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(-1.5);
+                Operation::F32Trunc;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(-1.0)]);
+        }
+        { // F32Nearest
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(1.5);
+                Operation::F32Nearest;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(2.0)]);
+        }
+        { // F32Sqrt
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(4.0);
+                Operation::F32Sqrt;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(2.0)]);
+        }
+        { // F32Add
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(4.0);
+                Operation::F32Const(1.5);
+                Operation::F32Add;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(5.5)]);
+        }
+        { // F32Add
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(4.0);
+                Operation::F32Const(1.5);
+                Operation::F32Sub;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(-2.5)]);
+        }
+        { // F32Mul
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(4.0);
+                Operation::F32Const(1.5);
+                Operation::F32Mul;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(6.0)]);
+        }
+        { // F32Div
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(3.0);
+                Operation::F32Const(6.0);
+                Operation::F32Div;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(2.0)]);
+        }
+        { // F32Min
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(4.0);
+                Operation::F32Const(1.5);
+                Operation::F32Min;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(1.5)]);
+        }
+        { // F32Max
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(4.0);
+                Operation::F32Const(1.5);
+                Operation::F32Max;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(4.0)]);
+        }
+        { // F32Copysign
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F32Const(3.14);
+                Operation::F32Const(-100.0);
+                Operation::F32Copysign;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(-3.14)]);
         }
     }
 }
