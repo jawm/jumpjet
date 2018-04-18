@@ -3107,4 +3107,155 @@ mod tests {
             assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F32(-3.14)]);
         }
     }
+
+    #[test]
+    fn f64_ops() {
+        { // F64Abs
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F64Const(-1.5);
+                Operation::F64Abs;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(1.5)]);
+        }
+        { // F64Neg
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F64Const(-1.5);
+                Operation::F64Neg;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(1.5)]);
+        }
+        { // F64Ceil
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F64Const(-1.5);
+                Operation::F64Ceil;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(-1.0)]);
+        }
+        { // F64Floor
+            sf!(sf);
+            let block = block! { Value(ValueType::F64), {
+                Operation::F64Const(-1.5);
+                Operation::F64Floor;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(-2.0)]);
+        }
+        { // F64Trunc
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F64Const(-1.5);
+                Operation::F64Trunc;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(-1.0)]);
+        }
+        { // F64Nearest
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F64Const(1.5);
+                Operation::F64Nearest;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(2.0)]);
+        }
+        { // F64Sqrt
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F64Const(4.0);
+                Operation::F64Sqrt;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(2.0)]);
+        }
+        { // F64Add
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F64Const(4.0);
+                Operation::F64Const(1.5);
+                Operation::F64Add;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(5.5)]);
+        }
+        { // F64Add
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F64Const(4.0);
+                Operation::F64Const(1.5);
+                Operation::F64Sub;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(-2.5)]);
+        }
+        { // F64Mul
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F64Const(4.0);
+                Operation::F64Const(1.5);
+                Operation::F64Mul;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(6.0)]);
+        }
+        { // F64Div
+            sf!(sf);
+            let block = block! { Value(ValueType::F64), {
+                Operation::F64Const(3.0);
+                Operation::F64Const(6.0);
+                Operation::F64Div;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(2.0)]);
+        }
+        { // F64Min
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F64Const(4.0);
+                Operation::F64Const(1.5);
+                Operation::F64Min;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(1.5)]);
+        }
+        { // F64Max
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F64Const(4.0);
+                Operation::F64Const(1.5);
+                Operation::F64Max;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(4.0)]);
+        }
+        { // F64Copysign
+            sf!(sf);
+            let block = block! { Value(ValueType::F32), {
+                Operation::F64Const(3.14);
+                Operation::F64Const(-100.0);
+                Operation::F64Copysign;
+                Operation::End;
+            }};
+            block.execute(&mut sf);
+            assert_eq!(sf.stack, &mut vec![ValueTypeProvider::F64(-3.14)]);
+        }
+    }
 }
